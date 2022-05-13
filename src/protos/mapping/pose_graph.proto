@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+import "mapping/trajectory_node_data.proto";
+import "mapping/submap.proto";
+import "transform/transform.proto";
+
+package protos.mapping.proto;
+
+
+message SubmapId {
+  int32 trajectory_id = 1;
+  int32 submap_index = 2;  // Submap index in the given trajectory.
+}
+
+message NodeId {
+  int32 trajectory_id = 1;
+  int32 node_index = 2;  // Node index in the given trajectory.
+}
+
+message SubmapData {
+  SubmapId id = 1;
+  Submap2D submap = 2;
+  transform.proto.Rigid3d global_pose = 3;
+}
+
+message PoseGraphHeader {
+  int32 format_version = 1;
+}
+
+message PoseGraph {
+  message Constraint {
+    // Differentiates between intra-submap (where the range data was inserted
+    // into the submap) and inter-submap constraints (where the range data was
+    // not inserted into the submap).
+    enum Tag {
+      INTRA_SUBMAP = 0;
+      INTER_SUBMAP = 1;
+    }
+
+    SubmapId submap_id = 1;  // Submap ID.
+    NodeId node_id = 2;  // Node ID.
+    // Pose of the node relative to submap, i.e. taking data from the node frame
+    // into the submap frame.
+    transform.proto.Rigid3d relative_pose = 3;
+    // Weight of the translational part of the constraint.
+    double translation_weight = 6;
+    // Weight of the rotational part of the constraint.
+    double rotation_weight = 7;
+    Tag tag = 5;
+  }
+  int32 trajectory_id = 1;
+  repeated Constraint constraint = 2;
+  repeated TrajectoryNode trajectory = 3;
+  repeated SubmapData submaps = 4;
+}

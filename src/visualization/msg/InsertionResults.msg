@@ -1,0 +1,2 @@
+TrajectoryNodeData node
+SubMap2D[] insertion_submaps

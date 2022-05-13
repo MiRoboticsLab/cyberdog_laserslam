@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package protos.server.proto;
+
+service Reloc {
+    // Sends Reloc message
+    rpc GetRelocPose(RelocRequest) returns (RelocReply) {}
+}
+
+message RelocRequest {
+    string name = 1;
+}
+
+message RelocReply {
+    int32 timestamp = 1;
+    Quaternion bearing = 2;
+    Point position = 3;
+}
+
+message Point {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+}
+
+message Quaternion {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+    double w = 4;
+}
