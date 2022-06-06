@@ -17,6 +17,7 @@
   <depend>common</depend>
   <depend>rviz_display</depend>
   <depend>transform</depend>
+  <depend>pcl_msgs</depend>
 
 
   <export>

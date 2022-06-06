@@ -14,6 +14,7 @@
 
   <depend>common</depend>
   <depend>transform</depend>
+  <depend>pcl_conversions</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

@@ -46,6 +46,7 @@ find_package(pose_extrapolator REQUIRED)
 find_package(range_data_matching REQUIRED)
 find_package(rviz_display REQUIRED)
 find_package(pose_graph REQUIRED)
+find_package(pcl_msgs REQUIRED)
 
 
 # find dependencies
@@ -102,36 +103,36 @@ ament_target_dependencies(${PROJECT_NAME}
                             "Protobuf"
                             )                            
 
-add_executable(local_slam_test src/local_slam_test.cc)
-target_link_libraries(local_slam_test gtest gtest_main glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} 
-absl::algorithm
-absl::base
-absl::debugging
-absl::flat_hash_map
-absl::memory
-absl::meta
-absl::numeric
-absl::str_format
-absl::strings
-absl::synchronization
-absl::time
-absl::utility
+		    #add_executable(local_slam_test src/local_slam_test.cc)
+		    #target_link_libraries(local_slam_test gtest gtest_main glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} 
+		    #absl::algorithm
+#absl::base
+#absl::debugging
+#absl::flat_hash_map
+#absl::memory
+#absl::meta
+#absl::numeric
+#absl::str_format
+#absl::strings
+#absl::synchronization
+#absl::time
+#absl::utility
 #${_REFLECTION}
 #${_GRPC_GRPCPP}
-${_PROTOBUF_LIBPROTOBUF})
+#${_PROTOBUF_LIBPROTOBUF})
 
-add_test(NAME local_slam_test COMMAND local_slam_test)   
+#add_test(NAME local_slam_test COMMAND local_slam_test)   
 
-ament_target_dependencies(local_slam_test
-                           "Protobuf"
-                           "transform"
-                           "common"
-                           "sensor"
-                           "pose_extrapolator"
-                           "range_data_matching"
-                           "pose_graph"
-                           "rviz_display"
-                           )
+#ament_target_dependencies(local_slam_test
+#                           "Protobuf"
+#                           "transform"
+#                           "common"
+#                           "sensor"
+#                           "pose_extrapolator"
+#                           "range_data_matching"
+#                           "pose_graph"
+#                           "rviz_display"
+#                           )
 
 add_executable(local_slam_test_node src/local_slam_test_node.cc)
 target_link_libraries(local_slam_test_node glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} ${PCL_LIBRARIES} 
@@ -167,6 +168,7 @@ ament_target_dependencies(local_slam_test_node
                             "transform"
                             "pose_extrapolator"
                             "range_data_matching"
+                            "pcl_msgs"
                             )
 
 add_executable(demo_front_end demo_front_end/front_end_demo.cc)

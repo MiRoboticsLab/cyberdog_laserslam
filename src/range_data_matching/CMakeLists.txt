@@ -37,6 +37,7 @@ find_package(absl REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 find_package(absl REQUIRED)
+find_package(pcl_msgs REQUIRED)
 
 
 # uncomment the following section in order to fill in
@@ -80,9 +81,9 @@ add_library(${PROJECT_NAME} src/grid_2d.cc
                             src/fast_correlative_scan_matcher_2d.cc
                             src/real_time_correlative_scan_matcher_2d.cc
                             src/imu_integration_midpoint.cc
-                            src/transform_pc_2_image.cc
-                            src/line_extraction.cc
-                            src/line_extract_by_pcl.cc
+			    #src/transform_pc_2_image.cc
+			    #src/line_extraction.cc
+			    #src/line_extract_by_pcl.cc
                             src/filter.cc
                             src/motion_filter.cc
                             src/complementary_filter.cc)
@@ -98,57 +99,60 @@ ament_target_dependencies(${PROJECT_NAME}
                             "sensor"
                             "protos"
                             "absl"       
+                            "pcl_msgs"       
+			    "Ceres"
                             )                            
+		    target_link_libraries(${PROJECT_NAME}
+			    ${CERES_LIBRARIES})
+		    #add_executable(integrator_test_node src/imu_integration_midpoint_test.cc)
+		    #target_link_libraries(integrator_test_node glog ${PROJECT_NAME} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} ${CERES_LIBRARIES}  )
+		    #add_executable(filter_test_node src/filter_test_node.cc)
+		    #target_link_libraries(filter_test_node glog ${PROJECT_NAME} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} ${CERES_LIBRARIES}  )
+		    #add_executable(pcl_extractor src/extract_line.cc)
+		    #target_link_libraries(pcl_extractor glog ${PROJECT_NAME} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} ${CERES_LIBRARIES}  )
+		    #add_executable(occupancy_grid_test src/occupancy_grid_test.cc)
+		    #target_link_libraries(occupancy_grid_test glog ${PROJECT_NAME} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} ${CERES_LIBRARIES} 
+		    #absl::algorithm
+		    #absl::base
+#absl::debugging
+#absl::flat_hash_map
+#absl::memory
+#absl::meta
+#absl::numeric
+#absl::str_format
+#absl::strings
+#absl::synchronization
+#absl::time
+#absl::utility)
 
-add_executable(integrator_test_node src/imu_integration_midpoint_test.cc)
-target_link_libraries(integrator_test_node glog ${PROJECT_NAME} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} ${CERES_LIBRARIES}  )
-add_executable(filter_test_node src/filter_test_node.cc)
-target_link_libraries(filter_test_node glog ${PROJECT_NAME} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} ${CERES_LIBRARIES}  )
-add_executable(pcl_extractor src/extract_line.cc)
-target_link_libraries(pcl_extractor glog ${PROJECT_NAME} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} ${CERES_LIBRARIES}  )
-add_executable(occupancy_grid_test src/occupancy_grid_test.cc)
-target_link_libraries(occupancy_grid_test glog ${PROJECT_NAME} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} ${CERES_LIBRARIES} 
-absl::algorithm
-absl::base
-absl::debugging
-absl::flat_hash_map
-absl::memory
-absl::meta
-absl::numeric
-absl::str_format
-absl::strings
-absl::synchronization
-absl::time
-absl::utility)
-
-ament_target_dependencies(integrator_test_node
-         "rclcpp"
-         "sensor_msgs"
-         "nav_msgs"
-         "geometry_msgs"
-         "tf2"
-         "laser_geometry"
-         )
-ament_target_dependencies(filter_test_node
-         "rclcpp"
-         "sensor_msgs"
-         "nav_msgs"
-         "geometry_msgs"
-         "tf2"
-         "laser_geometry"
-         )
-ament_target_dependencies(occupancy_grid_test
-         "rclcpp"
-         "sensor_msgs"
-         "nav_msgs"
-         "geometry_msgs"
-         "tf2"
-         "laser_geometry"
-         "common"
-         "sensor"
-         "rviz_display"
-         "Protobuf"
-         )
+#ament_target_dependencies(integrator_test_node
+#         "rclcpp"
+#         "sensor_msgs"
+#         "nav_msgs"
+#         "geometry_msgs"
+#         "tf2"
+#         "laser_geometry"
+#         )
+#ament_target_dependencies(filter_test_node
+	#"rclcpp"
+	 #"sensor_msgs"
+	 #"nav_msgs"
+	 #"geometry_msgs"
+	 #"tf2"
+	 #"laser_geometry"
+	 # )
+ #ament_target_dependencies(occupancy_grid_test
+	#"rclcpp"
+	 #"sensor_msgs"
+	 #"nav_msgs"
+	 #"geometry_msgs"
+	 #"tf2"
+	 #"laser_geometry"
+	 #"common"
+	 #"sensor"
+	 #"rviz_display"
+	 #"Protobuf"
+	 #         )
 
 #add_executable(xy_index_test src/xy_index_test.cc)
 #target_link_libraries(xy_index_test  gtest gtest_main ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} glog)
@@ -158,28 +162,28 @@ ament_target_dependencies(occupancy_grid_test
 #target_link_libraries(value_conversion_table_test gtest gtest_main glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME})
 #add_test(NAME value_conversion_table_test COMMAND value_conversion_table_test)
 
-add_executable(ceres_scan_matcher_test src/ceres_scan_matching_test.cc)
-target_link_libraries(ceres_scan_matcher_test gtest gtest_main glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} absl::algorithm
-absl::base
-absl::debugging
-absl::flat_hash_map
-absl::memory
-absl::meta
-absl::numeric
-absl::strings
-absl::synchronization
-absl::time
-absl::utility)
+#add_executable(ceres_scan_matcher_test src/ceres_scan_matching_test.cc)
+#target_link_libraries(ceres_scan_matcher_test glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} absl::algorithm
+#absl::base
+#absl::debugging
+#absl::flat_hash_map
+#absl::memory
+#absl::meta
+#absl::numeric
+#absl::strings
+#absl::synchronization
+#absl::time
+#absl::utility)
 
-add_test(NAME ceres_scan_matcher_test COMMAND ceres_scan_matcher_test)
-ament_target_dependencies(ceres_scan_matcher_test
-                           "protos"
-                           "transform"
-                           "common"
-                           "sensor"
-                           "Protobuf"
-                           "absl"
-                           )
+#add_test(NAME ceres_scan_matcher_test COMMAND ceres_scan_matcher_test)
+#ament_target_dependencies(ceres_scan_matcher_test
+#                           "protos"
+#                           "transform"
+#                           "common"
+#                           "sensor"
+#                           "Protobuf"
+#                           "absl"
+#                           )
 
 
 #add_executable(transform_test src/transform_test.cc)

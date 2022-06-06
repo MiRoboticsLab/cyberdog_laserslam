@@ -21,8 +21,8 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-set(protobuf_MODULE_COMPATIBLE TRUE)
-find_package(Protobuf CONFIG REQUIRED)
+#set(protobuf_MODULE_COMPATIBLE TRUE)
+find_package(Protobuf REQUIRED)
 
 #ind_package(Protobuf CONFIG REQUIRED)
 set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)

@@ -16,6 +16,8 @@
   <depend>common</depend>
   <depend>transform</depend>
   <depend>sensor</depend>
+  <depend>visualization</depend>
+  <depend>pcl_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
