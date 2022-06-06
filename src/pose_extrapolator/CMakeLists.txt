@@ -31,6 +31,7 @@ find_package(absl REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
 find_package(absl REQUIRED)
+find_package(pcl_msgs REQUIRED)
 #find_package(transform REQUIRED)
 #find_package(common REQUIRED)
 find_package(sensor REQUIRED)
@@ -77,6 +78,7 @@ ament_target_dependencies(${PROJECT_NAME}
                             "sensor"
                             "transform"
                             "absl"
+			    "pcl_msgs"
                            )                          
 
 add_executable(tracker_test_node src/tracker_test.cc)

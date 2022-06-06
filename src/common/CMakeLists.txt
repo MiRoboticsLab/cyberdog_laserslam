@@ -49,25 +49,25 @@ ament_target_dependencies(${PROJECT_NAME}
              "rclcpp"
                             )                            
 
-add_executable(task_test src/task_test.cc)
-target_link_libraries(task_test glog gtest gtest_main gmock ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} 
-absl::algorithm
-absl::base
-absl::debugging
-absl::flat_hash_map
-absl::memory
-absl::meta
-absl::numeric
-absl::str_format
-absl::strings
-absl::synchronization
-absl::time
-absl::utility)
+#add_executable(task_test src/task_test.cc)
+#target_link_libraries(task_test glog gtest gtest_main gmock ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} 
+#absl::algorithm
+#absl::base
+#absl::debugging
+#absl::flat_hash_map
+#absl::memory
+#absl::meta
+#absl::numeric
+#absl::str_format
+#absl::strings
+#absl::synchronization
+#absl::time
+#absl::utility)
 
-add_test(NAME task_test COMMAND task_test)   
+#add_test(NAME task_test COMMAND task_test)   
                             
-ament_target_dependencies(task_test
-                          )                            
+#ament_target_dependencies(task_test
+#                          )                            
 
 ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(Eigen3 absl Boost)

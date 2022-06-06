@@ -82,27 +82,15 @@ ament_target_dependencies(transform_test
                           "Protobuf"
                            )
 
-add_executable(proto_stream_test test/proto_stream_test.cc)
-target_link_libraries(proto_stream_test gtest gtest_main ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME}  ${Protobuf_LIBRARIES} ${Boost_LIBRARIES} absl::algorithm
-absl::base
-absl::debugging
-absl::flat_hash_map
-absl::memory
-absl::meta
-absl::numeric
-absl::str_format
-absl::strings
-absl::synchronization
-absl::time
-absl::utility 
-glog)
-add_test(NAME proto_stream_test COMMAND proto_stream_test)
-ament_target_dependencies(proto_stream_test
-                           "protos"
-                           "common"
-                           "Protobuf"
-                          "Boost"
-                          )
+		   #add_executable(proto_stream_test test/proto_stream_test.cc)
+		   #target_link_libraries(proto_stream_test gtest gtest_main ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME}  ${Protobuf_LIBRARIES} ${Boost_LIBRARIES} absl::flat_hash_map absl::container absl::any absl::utility glog)
+		   #add_test(NAME proto_stream_test COMMAND proto_stream_test)
+		   #ament_target_dependencies(proto_stream_test
+		   #       "protos"
+		   #       "common"
+		   #       "Protobuf"
+		   #      "Boost"
+		   #      )
 ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(Eigen3 absl common protos)
 install(TARGETS ${PROJECT_NAME}

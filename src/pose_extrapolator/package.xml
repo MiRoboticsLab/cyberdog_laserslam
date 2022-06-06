@@ -15,6 +15,7 @@
   <depend>transform</depend>
   <depend>common</depend>
   <depend>sensor</depend>
+  <depend>pcl_msgs</depend>
   
   
   <export>

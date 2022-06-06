@@ -35,6 +35,7 @@ find_package(transform REQUIRED)
 find_package(rviz_display REQUIRED)
 find_package(sensor REQUIRED)
 find_package(absl REQUIRED)
+find_package(pcl_msgs REQUIRED)
 #set(protobuf_MODULE_COMPATIBLE TRUE)
 #find_package(Protobuf CONFIG REQUIRED)
 #set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
@@ -82,10 +83,11 @@ ament_target_dependencies(${PROJECT_NAME}
                             "sensor"
                             "transform"
                             "Protobuf"
+                            "pcl_msgs"
                             )
-add_executable(optimization_test src/optimization_problem_test.cc)
-target_link_libraries(optimization_test gtest gtest_main glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} absl::strings)
-add_test(NAME optimization_test COMMAND optimization_test)                           
+		    #add_executable(optimization_test src/optimization_problem_test.cc)
+		    #target_link_libraries(optimization_test  glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} absl::strings)
+		    #add_test(NAME optimization_test COMMAND optimization_test)                           
 
 
 ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
