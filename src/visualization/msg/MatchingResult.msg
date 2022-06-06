@@ -1,0 +1,4 @@
+std_msgs/Header header
+geometry_msgs/Pose local_pose
+RangeData range_data_in_local
+InsertionResults insertion_result

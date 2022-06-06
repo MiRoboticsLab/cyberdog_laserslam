@@ -1,0 +1,4 @@
+float64 resolution
+float64 max_x
+float64 max_y
+CellLimits cell_limits

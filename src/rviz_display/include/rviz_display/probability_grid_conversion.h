@@ -1,0 +1,46 @@
+/**
+ * Copyright (c) 2022 XiaoMi
+ *
+ * Author: Feixiang Zeng <zengfeixiang@xiaomi.com>
+ *
+ */
+#ifndef RVIZ_DISPLAY_PROBABILITY_GRID_TO_IMAGE_H_
+#define RVIZ_DISPLAY_PROBABILITY_GRID_TO_IMAGE_H_
+#include <string>
+
+#include "rclcpp/rclcpp.hpp"
+#include "nav_msgs/msg/occupancy_grid.hpp"
+
+#include "common/port.h"
+#include "range_data_matching/map/probability_grid.h"
+#include "range_data_matching/map/value_conversion_tables.h"
+#include "rviz_display/image.h"
+
+namespace cartographer {
+namespace rviz_display {
+class ProbabilityGridConversion {
+ public:
+  ProbabilityGridConversion(const std::string& topic_name) {}
+  virtual ~ProbabilityGridConversion() {}
+
+  void CreateOccupiedGridAndPublish(const mapping::Grid2D* grid,
+                                    double resolution,
+                                    const std::string& frame_id,
+                                    const rclcpp::Time& time) {
+    auto occupied_grid = CreateOccupiedGrid(grid, resolution, frame_id, time);
+  }
+
+ private:
+  std::unique_ptr<Image> DrawProbabilityGrid(const mapping::Grid2D* grid,
+                                             Eigen::Array2i* offset);
+
+  uint8 ProbabilityToColor(float probability_from_grid);
+
+  std::unique_ptr<nav_msgs::msg::OccupancyGrid> CreateOccupiedGrid(
+      const mapping::Grid2D* grid, double resolution,
+      const std::string& frame_id, const rclcpp::Time& time);
+};
+}  // namespace rviz_display
+}  // namespace cartographer
+
+#endif  // RVIZ_DISPLAY_PROBABILITY_GRID_TO_IMAGE_H_

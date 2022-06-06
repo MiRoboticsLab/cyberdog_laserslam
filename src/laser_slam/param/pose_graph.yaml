@@ -1,0 +1,74 @@
+pose_graph_node:
+  ros__parameters:
+    frame_id: laser_odom
+    imu_topic: /mi1045856/camera/imu
+    odometry_topic: /mi1045856/odom_out
+    laser_scan_topic: /scan
+    use_imu: true
+    use_real_time_correlative_scan_matching: true
+    num_accumulated: 1
+    use_filter: false
+    gravity_constant: 10.0
+    pose_duration_time: 0.01
+    max_time_seconds: 5.0
+    max_distance_meters: 0.2
+    max_angle_radians: 0.0175
+    min_range: 0.2
+    max_range: 15.0
+    missing_data_ray_length: 5.0
+    voxel_filter_size: 0.025
+    min_num_points: 200.0
+    max_length: 0.5
+    max_range_scale: 20.0
+    submap_param:
+      grid_insert_type: 0
+      num_range_data: 20
+      grid_type: 0
+      resolution: 0.05
+      probability_inserter_param:
+        hit_probability: 0.55
+        miss_probability: 0.49
+        insert_free: true
+    ceres_scan_matching_param:
+      use_nonmonotonic_steps: false
+      max_num_iterations: 20
+      num_threads: 1
+      occupied_space_weight: 1.0
+      translation_weight: 10.0
+      rotation_weight: 40.0
+    real_time_correlative_scan_matching_param:
+      linear_search_window: 0.1
+      angular_search_window: 0.35
+      translation_delta_cost_weight: 0.1
+      rotation_delta_cost_weight: 0.1
+    imu_to_odom: [0.0, -1.0, 0.0, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0]
+    pose_graph_param:
+     optimize_every_n_nodes: 10
+     max_num_final_iterations: 200
+     matcher_rotation_weight: 5e2
+     matcher_translation_weight: 1.6e3
+     constraint_builder_param:
+      min_score: 0.55
+      log_matches: true
+      loop_closure_rotation_weight: 1.e5
+      loop_closure_translation_weight: 1.1e4
+      max_constraint_distance: 2.
+      ratio: 0.3
+      ceres_param:
+       max_num_iterations: 10
+       num_threads: 1
+       use_nonmonotonic_steps: true
+       occupied_space_weight: 20.
+       translation_weight: 10.
+       rotation_weight: 1.
+      fast_param:
+       branch_and_bound_depth: 7
+       angular_search_window: 0.26179939
+       linear_search_window: 7.
+     optimization_param:
+      huber_scale: 1e1
+      max_num_iterations: 50
+      num_threads: 7
+      report_full_summary: true
+    thread_pool_num: 4
+

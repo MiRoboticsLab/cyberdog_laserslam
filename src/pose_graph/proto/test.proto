@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package pose_graph.proto;
+
+message Test {
+    int32 i = 1;
+}

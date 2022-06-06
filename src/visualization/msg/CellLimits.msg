@@ -1,0 +1,2 @@
+int64 num_x_cells
+int64 num_y_cells
