@@ -44,40 +44,42 @@ class FrontEndDemo : public rclcpp::Node {
         pose_recorder_(nullptr) {}
 
   virtual ~FrontEndDemo() {
-    pose_graph_->RunFinalOptimization();
-    protos::mapping::proto::PoseGraphHeader header;
-    header.set_format_version(1);
-    protos::mapping::proto::PoseGraph graph_proto =
-        pose_graph_->ToProto(0, true);
-    std::string file_name = map_save_path_ + "graph.pbstream";
-    stream::ProtoStreamWriter writer(file_name);
-    writer.WriteProto(header);
-    writer.WriteProto(graph_proto);
-    CHECK(writer.Close());
-    const auto pose_graph_data = pose_graph_->pose_graph_data();
-    std::vector<sensor::RangeData> range_datas;
-    auto begin_it = pose_graph_data.trajectory_nodes.BeginOfTrajectory(0);
-    auto end_it = pose_graph_data.trajectory_nodes.EndOfTrajectory(0);
-    for (; begin_it != end_it; ++begin_it) {
-      transform::Rigid3d local_to_global =
-          pose_graph_data.trajectory_nodes.at(begin_it->id).global_pose *
-          pose_graph_data.trajectory_nodes.at(begin_it->id)
-              .constant_data->local_pose.inverse();
-      auto range_data = id_data_.at(begin_it->id);
-      LOG(INFO) << "delta pose is: " << local_to_global.DebugString()
-                << "id is: " << begin_it->id.node_index;
-      auto pc =
-          sensor::TransformRangeData(range_data, local_to_global.cast<float>());
-      range_datas.push_back(pc);
-    }
-    grid_->RayCastByProbability(range_datas);
-    std::string map_name = map_save_path_ + "map";
-    grid_->WritePgmByProbabilityGrid(map_name);
-    // auto pb_grid = grid_->ToRosOccupancyMsg(0.05, frame_id_,
-    //                                         rclcpp::Time::max(), false, "");
+    // pose_graph_->RunFinalOptimization();
+    // protos::mapping::proto::PoseGraphHeader header;
+    // header.set_format_version(1);
+    // protos::mapping::proto::PoseGraph graph_proto =
+    //     pose_graph_->ToProto(0, true);
+    // std::string file_name = map_save_path_ + "graph.pbstream";
+    // stream::ProtoStreamWriter writer(file_name);
+    // writer.WriteProto(header);
+    // writer.WriteProto(graph_proto);
+    // CHECK(writer.Close());
+    // const auto pose_graph_data = pose_graph_->pose_graph_data();
+    // std::vector<sensor::RangeData> range_datas;
+    // auto begin_it = pose_graph_data.trajectory_nodes.BeginOfTrajectory(0);
+    // auto end_it = pose_graph_data.trajectory_nodes.EndOfTrajectory(0);
+    // for (; begin_it != end_it; ++begin_it) {
+    //   transform::Rigid3d local_to_global =
+    //       pose_graph_data.trajectory_nodes.at(begin_it->id).global_pose *
+    //       pose_graph_data.trajectory_nodes.at(begin_it->id)
+    //           .constant_data->local_pose.inverse();
+    //   auto range_data = id_data_.at(begin_it->id);
+    //   LOG(INFO) << "delta pose is: " << local_to_global.DebugString()
+    //             << "id is: " << begin_it->id.node_index;
+    //   auto pc =
+    //       sensor::TransformRangeData(range_data,
+    //       local_to_global.cast<float>());
+    //   range_datas.push_back(pc);
+    // }
+    // grid_->RayCastByProbability(range_datas);
+    // std::string map_name = map_save_path_ + "map";
+    // grid_->WritePgmByProbabilityGrid(map_name);
+    // // auto pb_grid = grid_->ToRosOccupancyMsg(0.05, frame_id_,
+    // //                                         rclcpp::Time::max(), false,
+    // "");
 
-    pose_recorder_->Write(pose_graph_data.trajectory_nodes);
-    pose_recorder_->Close();
+    // pose_recorder_->Write(pose_graph_data.trajectory_nodes);
+    // pose_recorder_->Close();
   }
 
   bool Initialization() {
@@ -225,6 +227,8 @@ class FrontEndDemo : public rclcpp::Node {
         "laser_pose", 10);
     pc_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
         "point_cloud", 10);
+    scan_publisher_ = this->create_publisher<sensor_msgs::msg::LaserScan>(
+        "intensity_scan", 10);
 
     callback_imu_subscriber_ = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -288,6 +292,40 @@ class FrontEndDemo : public rclcpp::Node {
     return true;
   }
 
+  bool Stop() {
+    pose_graph_->RunFinalOptimization();
+    protos::mapping::proto::PoseGraphHeader header;
+    header.set_format_version(1);
+    protos::mapping::proto::PoseGraph graph_proto =
+        pose_graph_->ToProto(0, true);
+    std::string file_name = map_save_path_ + "graph.pbstream";
+    stream::ProtoStreamWriter writer(file_name);
+    writer.WriteProto(header);
+    writer.WriteProto(graph_proto);
+    CHECK(writer.Close());
+    const auto pose_graph_data = pose_graph_->pose_graph_data();
+    std::vector<sensor::RangeData> range_datas;
+    auto begin_it = pose_graph_data.trajectory_nodes.BeginOfTrajectory(0);
+    auto end_it = pose_graph_data.trajectory_nodes.EndOfTrajectory(0);
+    for (; begin_it != end_it; ++begin_it) {
+      transform::Rigid3d local_to_global =
+          pose_graph_data.trajectory_nodes.at(begin_it->id).global_pose *
+          pose_graph_data.trajectory_nodes.at(begin_it->id)
+              .constant_data->local_pose.inverse();
+      auto range_data = id_data_.at(begin_it->id);
+      LOG(INFO) << "delta pose is: " << local_to_global.DebugString()
+                << "id is: " << begin_it->id.node_index;
+      auto pc =
+          sensor::TransformRangeData(range_data, local_to_global.cast<float>());
+      range_datas.push_back(pc);
+    }
+    grid_->RayCastByProbability(range_datas);
+    std::string map_name = map_save_path_ + "map";
+    grid_->WritePgmByProbabilityGrid(map_name);
+    pose_recorder_->Write(pose_graph_data.trajectory_nodes);
+    pose_recorder_->Close();
+  }
+
  private:
   void ImuCallBack(const sensor_msgs::msg::Imu::SharedPtr imu) {
     sensor::ImuData imu_meas;
@@ -333,6 +371,7 @@ class FrontEndDemo : public rclcpp::Node {
     LOG(INFO) << "delta time is:: " << common::ToSeconds(time - last_time_);
     last_time_ = time;
     projector_.projectLaser(*laser, cloud, 20.0);
+
     pcl::PointCloud<pcl::PointXYZ> raw_cloud;
     pcl::fromROSMsg(cloud, raw_cloud);
     for (size_t i = 0; i < raw_cloud.points.size(); ++i) {
@@ -400,6 +439,7 @@ class FrontEndDemo : public rclcpp::Node {
   }
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_publisher_;
   rclcpp::CallbackGroup::SharedPtr callback_odometry_subscriber_;
   rclcpp::CallbackGroup::SharedPtr callback_imu_subscriber_;
   rclcpp::CallbackGroup::SharedPtr callback_laser_subscriber_;
@@ -436,6 +476,7 @@ int main(int argc, char** argv) {
   local_slam->Initialization();
   executor.add_node(local_slam);
   executor.spin();
+  local_slam->Stop();
 
   rclcpp::shutdown();
   return 0;

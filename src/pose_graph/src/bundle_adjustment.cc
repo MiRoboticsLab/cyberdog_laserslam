@@ -143,13 +143,14 @@ bool BundleAdjustment::FindRelocConstraints(
   }
   node_id = data_.trajectory_nodes.Append(trajectory_id, *constant_data);
   ComputeRelocConstraintsForNode(node_id);
-
-  auto id = std::prev(optimization_problem_->node_data().EndOfTrajectory(
-                          trajectory_id))
-                ->id;
-  optimized_pose = data_.trajectory_nodes.at(id).global_pose;
-  LOG(INFO) << "optimized pose is: " << optimized_pose.DebugString();
-  *pose_after_optimized = optimized_pose;
+  if (found_reloc_constraints_) {
+    auto id = std::prev(optimization_problem_->node_data().EndOfTrajectory(
+                            trajectory_id))
+                  ->id;
+    optimized_pose = data_.trajectory_nodes.at(id).global_pose;
+    LOG(INFO) << "optimized pose is: " << optimized_pose.DebugString();
+    *pose_after_optimized = optimized_pose;
+  }
   return found_reloc_constraints_;
 }
 

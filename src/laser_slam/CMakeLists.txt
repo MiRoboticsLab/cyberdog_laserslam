@@ -24,6 +24,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(visualization REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(laser_geometry REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Threads)
@@ -247,7 +248,9 @@ ament_target_dependencies(demo
                           "transform"
                           "pose_extrapolator"
                           "range_data_matching"  
-                          "protos"        
+                          "protos"
+                          "tf2"
+                          "tf2_ros"        
                           ) 
 
 add_executable(deserializer src/test_pose_graph_reader.cc)

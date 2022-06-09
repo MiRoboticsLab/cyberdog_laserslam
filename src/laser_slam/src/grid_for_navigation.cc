@@ -97,10 +97,12 @@ void GridForNavigation::CastRayOnMap(
 void GridForNavigation::WritePgmByProbabilityGrid(const std::string& filestem) {
   Eigen::Array2i offset;
   mapping::CellLimits cell_limits;
-  auto occupied_grid = grid_->ToRosOccupancyMsg(0.05, "laser_odom",
-                                                rclcpp::Time::max(), false, "");
-  LOG(INFO) << "origin is: " << occupied_grid->info.origin.position.x << " , "
-            << occupied_grid->info.origin.position.y;
+  // auto occupied_grid = grid_->ToRosOccupancyMsg(0.05, "laser_odom",
+  //                                               rclcpp::Time::max(), false,
+  //                                               "");
+  // LOG(INFO) << "origin is: " << occupied_grid->info.origin.position.x << " ,
+  // "
+  //           << occupied_grid->info.origin.position.y;
   const auto& map_limits = grid_->limits();
   grid_->ComputeCroppedLimits(&offset, &cell_limits);
   LOG(INFO) << "offset is: " << offset;

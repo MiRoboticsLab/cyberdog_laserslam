@@ -14,11 +14,14 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/transform_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "laser_geometry/laser_geometry.hpp"
 #include "tf2/buffer_core.h"
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2_ros/transform_broadcaster.h"
 
 namespace cartographer {
 namespace laser_slam {
@@ -235,6 +238,7 @@ class LocalizationDemo : public rclcpp::Node {
         [this](const transform::Rigid3d& pose, const sensor::RangeData& pc) {
           PosePcCallBack(pose, pc);
         });
+    tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
     return true;
   }
 
@@ -326,6 +330,32 @@ class LocalizationDemo : public rclcpp::Node {
     auto pc_ros = pc.returns.ToPointCloud2();
     pc_ros.header.frame_id = "laser_odom";
     pc_publisher_->publish(pc_ros);
+
+    geometry_msgs::msg::TransformStamped t;
+
+    // Read message content and assign it to
+    // corresponding tf variables
+    t.header.stamp = common::ToRosTime(pc.returns.time());
+    t.header.frame_id = "map";
+    t.child_frame_id = "odom";
+
+    // Turtle only exists in 2D, thus we get x and y translation
+    // coordinates from the message and set the z coordinate to 0
+    t.transform.translation.x = pose.translation().x();
+    t.transform.translation.y = pose.translation().y();
+    t.transform.translation.z = 0.0;
+
+    // For the same reason, turtle can only rotate around one axis
+    // and this why we set rotation in x and y to 0 and obtain
+    // rotation in z axis from the message
+
+    t.transform.rotation.x = pose.rotation().x();
+    t.transform.rotation.y = pose.rotation().y();
+    t.transform.rotation.z = pose.rotation().z();
+    t.transform.rotation.w = pose.rotation().w();
+
+    // Send the transformation
+    tf_broadcaster_->sendTransform(t);
   }
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc_publisher_;
@@ -338,6 +368,7 @@ class LocalizationDemo : public rclcpp::Node {
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr
       laser_subscription_;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   LocalizationPtr localization_;
   laser_geometry::LaserProjection projector_;
   Eigen::Matrix3d transform_;

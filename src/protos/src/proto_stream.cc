@@ -71,6 +71,7 @@ bool ProtoStreamReader::Read(std::string* decompressed_data) {
     return false;
   }
   std::string compressed_data(compressed_size, '\0');
+  LOG(INFO) << "data size is: " << compressed_size;
   if (!in_.read(&compressed_data.front(), compressed_size)) {
     LOG(INFO) << "2";
     return false;
