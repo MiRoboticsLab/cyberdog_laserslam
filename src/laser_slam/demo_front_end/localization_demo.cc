@@ -200,6 +200,9 @@ class LocalizationDemo : public rclcpp::Node {
     this->declare_parameter("odometry_topic", odometry_topic);
     this->get_parameter("odometry_topic", odometry_topic);
     LOG(INFO) << odometry_topic;
+    std::string odom_frame_id("");
+    this->declare_parameter("odom_frame_id", odom_frame_id);
+    this->get_parameter("odom_frame_id", odom_frame_id);
     odom_subscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
         odometry_topic, rclcpp::SensorDataQoS(),
         std::bind(&LocalizationDemo::OdomCallback, this, std::placeholders::_1),
@@ -336,8 +339,8 @@ class LocalizationDemo : public rclcpp::Node {
     // Read message content and assign it to
     // corresponding tf variables
     t.header.stamp = common::ToRosTime(pc.returns.time());
-    t.header.frame_id = "map";
-    t.child_frame_id = "odom";
+    t.header.frame_id = "vodom";
+    t.child_frame_id = "base_link";
 
     // Turtle only exists in 2D, thus we get x and y translation
     // coordinates from the message and set the z coordinate to 0
@@ -373,6 +376,8 @@ class LocalizationDemo : public rclcpp::Node {
   laser_geometry::LaserProjection projector_;
   Eigen::Matrix3d transform_;
   transform::Rigid3d laser_t_odom_;
+  std::string odom_frame_id_;
+  std::string base_link_frame_id_;
 };
 
 }  // namespace laser_slam
