@@ -42,8 +42,8 @@ demo_node:
       angular_search_window: 0.35
       translation_delta_cost_weight: 0.1
       rotation_delta_cost_weight: 0.1
-    imu_to_odom: [0.0, -1.0, 0.0, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0]
-    laser_to_odom: [-0.103917, 0.02924, 0.0]
+    imu_to_odom: [-1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0]
+    laser_to_odom: [-0.1793, 0.0, 0.0]
     pose_graph_param:
      optimize_every_n_nodes: 10
      max_num_final_iterations: 200
