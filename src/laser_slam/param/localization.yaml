@@ -1,10 +1,10 @@
 demo_node:
   ros__parameters:
     frame_id: laser_odom
-    imu_topic: /mi0016548/camera/imu
-    odometry_topic: /mi0016548/odom_out
+    imu_topic: /camera/imu
+    odometry_topic: /odom_out
     laser_scan_topic: /scan
-    map_save_path: /home/zfx/map_test/
+    map_save_path: /home/mi/mapping/
     use_imu: true
     use_real_time_correlative_scan_matching: true
     num_accumulated: 1

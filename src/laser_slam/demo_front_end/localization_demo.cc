@@ -143,7 +143,7 @@ class LocalizationDemo : public rclcpp::Node {
     constraint_param.loop_closure_rotation_weight = 1.e5;
     constraint_param.loop_closure_translation_weight = 1.1e4;
     constraint_param.max_constraint_distance = 5.;
-    constraint_param.max_find_reloc_constraint_distance = 10.;
+    constraint_param.max_reloc_constraint_distance = 10.;
     constraint_param.ratio = 0.1;
     constraint_param.ceres_param.max_num_iterations = 10;
     constraint_param.ceres_param.num_threads = 1;
@@ -309,7 +309,10 @@ class LocalizationDemo : public rclcpp::Node {
                       const sensor::RangeData& pc) {
     nav_msgs::msg::Odometry odometry;
     odometry.header.frame_id = "laser_odom";
-    odometry.header.stamp = common::ToRosTime(pc.returns.time());
+
+    odometry.header.stamp.sec = common::ToRosTime(pc.returns.time()).seconds();
+    odometry.header.stamp.nanosec =
+        common::ToRosTime(pc.returns.time()).nanoseconds();
     odometry.child_frame_id = "base_footprint";
     odometry.pose.pose.position.x = pose.translation().x();
     odometry.pose.pose.position.y = pose.translation().y();
@@ -321,7 +324,9 @@ class LocalizationDemo : public rclcpp::Node {
     odom_publisher_->publish(odometry);
     geometry_msgs::msg::PoseStamped pose_pub;
     pose_pub.header.frame_id = "laser_odom";
-    pose_pub.header.stamp = common::ToRosTime(pc.returns.time());
+    pose_pub.header.stamp.sec = common::ToRosTime(pc.returns.time()).seconds();
+    pose_pub.header.stamp.nanosec =
+        common::ToRosTime(pc.returns.time()).nanoseconds();
     pose_pub.pose.orientation.x = pose.rotation().x();
     pose_pub.pose.orientation.y = pose.rotation().y();
     pose_pub.pose.orientation.z = pose.rotation().z();
@@ -338,7 +343,9 @@ class LocalizationDemo : public rclcpp::Node {
 
     // Read message content and assign it to
     // corresponding tf variables
-    t.header.stamp = common::ToRosTime(pc.returns.time());
+    LOG(INFO) << "time stamp: " << common::ToUniversal(pc.returns.time());
+    t.header.stamp.sec = common::ToRosTime(pc.returns.time()).seconds();
+    t.header.stamp.nanosec = common::ToRosTime(pc.returns.time()).nanoseconds();
     t.header.frame_id = "vodom";
     t.child_frame_id = "base_link";
 
