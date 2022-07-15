@@ -168,23 +168,32 @@ void Localization::AddRangeData(const sensor::PointCloud& timed_point_cloud) {
   }
 
   matching_result = local_slam_->AddRangeData(timed_point_cloud);
-  if (matching_result != nullptr) {
-    if (matching_result->insertion_result != nullptr) {
-      const auto node = matching_result->insertion_result->node_constant_data;
-      const auto submaps = matching_result->insertion_result->insertion_submaps;
-      auto node_id = pose_graph_->AddNode(node, trajectory_id_, submaps);
-      if (pose_pc_callback_) {
+  sensor::RangeData range_data_callback;
+  transform::Rigid3d pose_to_cb;
+  if (pose_pc_callback_) {
+    if (matching_result != nullptr) {
+      range_data_callback.returns.time() = matching_result->time;
+      if (matching_result->insertion_result != nullptr) {
+        const auto node = matching_result->insertion_result->node_constant_data;
+        const auto submaps =
+            matching_result->insertion_result->insertion_submaps;
+        auto node_id = pose_graph_->AddNode(node, trajectory_id_, submaps);
         // callback for updated pose and pc
-        auto pose = pose_graph_->pose_graph_data()
-                        .trajectory_nodes.at(node_id)
-                        .global_pose;
+        pose_to_cb = pose_graph_->pose_graph_data()
+                         .trajectory_nodes.at(node_id)
+                         .global_pose;
         auto pose_in_local = matching_result->local_pose;
-        auto local_to_global = pose * pose_in_local.inverse();
-        auto range_data_in_global =
+        auto local_to_global = pose_to_cb * pose_in_local.inverse();
+        range_data_callback =
             sensor::TransformRangeData(matching_result->range_data_in_local,
                                        local_to_global.cast<float>());
-        pose_pc_callback_(pose, range_data_in_global);
+        range_data_callback.returns.time() = matching_result->time;
+
+      } else {
+        pose_to_cb = matching_result->local_pose;
+        range_data_callback = matching_result->range_data_in_local;
       }
+      pose_pc_callback_(pose_to_cb, range_data_callback);
     }
   }
 }

@@ -4,8 +4,8 @@ demo_front_end_node:
     imu_topic: /camera/imu
     odometry_topic: /odom_out
     laser_scan_topic: /scan
-    map_save_path: /home/zfx/map_test/
-    pose_save_path: /home/zfx/map_test/pose.txt
+    map_save_path: /home/mi/mapping/
+    pose_save_path: /home/mi/mapping/pose.txt
     use_imu: true
     use_real_time_correlative_scan_matching: true
     num_accumulated: 1
