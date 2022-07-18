@@ -172,7 +172,6 @@ void Localization::AddRangeData(const sensor::PointCloud& timed_point_cloud) {
   transform::Rigid3d pose_to_cb;
   if (pose_pc_callback_) {
     if (matching_result != nullptr) {
-      range_data_callback.returns.time() = matching_result->time;
       if (matching_result->insertion_result != nullptr) {
         const auto node = matching_result->insertion_result->node_constant_data;
         const auto submaps =
@@ -193,6 +192,7 @@ void Localization::AddRangeData(const sensor::PointCloud& timed_point_cloud) {
         pose_to_cb = matching_result->local_pose;
         range_data_callback = matching_result->range_data_in_local;
       }
+      range_data_callback.returns.time() = matching_result->time;
       pose_pc_callback_(pose_to_cb, range_data_callback);
     }
   }
