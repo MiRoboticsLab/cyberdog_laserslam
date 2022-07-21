@@ -22,6 +22,9 @@
 namespace cartographer {
 namespace pose_graph {
 namespace optimization {
+typedef std::function<void(const mapping::SubmapId&,
+                           const std::shared_ptr<const mapping::Submap>&)>
+    SubmapCallback;
 class BundleAdjustment {
  public:
   BundleAdjustment(const PoseGraph2DParam& param,
@@ -74,6 +77,10 @@ class BundleAdjustment {
   // maybe pose graph data from different trajectory id
   protos::mapping::proto::PoseGraph ToProto(
       int trajectory_id, bool include_unfinished_submaps) const;
+
+  void SetSubmapCallback(const SubmapCallback& callback) {
+    submap_callback_ = callback;
+  }
 
  private:
   void RelocConstraintsWorkHandle(const ConstraintBuilder::Result& result);
@@ -159,6 +166,7 @@ class BundleAdjustment {
   ConstraintBuilder constraint_builder_;  // search constraint
   PoseGraphData data_;                    // all data in pose graph
   std::unique_ptr<WorkQueue> work_queue_ GUARDED_BY(work_queue_mutex_);
+  SubmapCallback submap_callback_;
 };
 typedef std::shared_ptr<BundleAdjustment> BundleAdjustmentPtr;
 typedef std::shared_ptr<const BundleAdjustment> BundleAdjustmentConstPtr;

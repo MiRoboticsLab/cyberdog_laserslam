@@ -91,13 +91,23 @@ ProbabilityGrid::ToRosOccupancyMsg(double resolution,
     for (int y = image->height() - 1; y >= 0; --y) {
       for (int x = 0; x < image->width(); ++x) {
         const uint32_t packed = image->pixel_data()[y * image->width() + x];
-        const unsigned char color = packed >> 16;
-        const unsigned char observed = packed >> 8;
+        const uint32 color = packed;
+        // const unsigned char observed = packed >> 8;
+        int v;
+        if (color == 128) {
+          v = -1;
+        } else {
+          if (color > 150) {
+            v = 1;
+          } else {
+            v = 0;
+          }
+        }
         const int value =
-            observed == 0 ? -1 : common::RoundToInt((1. - color / 255.) * 100.);
+            color == 128 ? -1 : common::RoundToInt((1. - color / 255.) * 100.);
         CHECK_LE(-1, value);
         CHECK_GE(100, value);
-        occupancy_grid->data.push_back(value);
+        occupancy_grid->data.push_back(v);
       }
     }
     if (save_pgm) {

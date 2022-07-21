@@ -16,6 +16,7 @@
 
 #include "common/math.h"
 #include "common/port.h"
+#include "range_data_matching/map/grid_2d.h"
 #include "range_data_matching/map/id.h"
 #include "range_data_matching/map/probability_values.h"
 #include "transform/transform.h"
@@ -70,6 +71,7 @@ class Submap {
   void set_insertion_finished(bool insertion_finished) {
     insertion_finished_ = insertion_finished;
   }
+  virtual const Grid2D* grid() const = 0;
 
  private:
   const transform::Rigid3d local_pose_;
