@@ -99,35 +99,6 @@ NodeId BundleAdjustment::AddFirstRelocNode(
     data_.trajectory_nodes.Trim(id);
   }
   AddNode(constant_data, trajectory_id, insertion_submaps);
-  // const auto constant_data =
-  //     data_.trajectory_nodes.BeginOfTrajectory(trajectory_id)
-  //         ->data.constant_data;
-  // const SubmapId submap_id =
-  //     data_.submap_data.Append(trajectory_id, InternalSubmapData());
-  // data_.submap_data.at(submap_id).submap = insertion_submaps[0];
-  // optimization_problem_->AddSubMap(
-  //     trajectory_id,
-  //     transform::Project2D(insertion_submaps[0]->local_pose()));
-  // data_.submap_data.at(submap_id).node_ids.emplace(
-  //     data_.trajectory_nodes.BeginOfTrajectory(trajectory_id)->id);
-  // // TODO: Find out coordinate transform relationship
-  // const transform::Rigid2d local_pose_2d = transform::Project2D(
-  //     constant_data->local_pose *
-  //     transform::Rigid3d::Rotation(constant_data->gravity_alignment.inverse()));
-  // const transform::Rigid2d constraint_transform =
-  //     transform::Project2D(insertion_submaps[0]->local_pose()).inverse() *
-  //     local_pose_2d;
-  // LOG(INFO) << "reloc constraint is: " << constraint_transform.DebugString()
-  //           << "submap pose is: "
-  //           << insertion_submaps[0]->local_pose().DebugString()
-  //           << "local constant data is: "
-  //           << constant_data->local_pose.DebugString();
-  // data_.constraints.push_back(Constraint{
-  //     submap_id,
-  //     data_.trajectory_nodes.BeginOfTrajectory(trajectory_id)->id,
-  //     {transform::Embed3D(constraint_transform),
-  //      param_.matcher_translation_weight, param_.matcher_rotation_weight},
-  //     Constraint::INTRA_SUBMAP});
   return data_.trajectory_nodes.BeginOfTrajectory(trajectory_id)->id;
 }
 
@@ -581,6 +552,10 @@ WorkItem::Result BundleAdjustment::ComputeConstraintsForNode(
       CHECK(finished_submap_data.state == SubmapState::kNoConstraintSearch);
       finished_submap_data.state = SubmapState::kFinished;
       newly_finished_submap_node_ids = finished_submap_data.node_ids;
+      if (submap_callback_) {
+        submap_callback_(newly_finished_submap_id,
+                         data_.submap_data.at(newly_finished_submap_id).submap);
+      }
     }
   }
   // compute constraint for each node and finished submap

@@ -48,7 +48,7 @@ class Submap2D : public Submap {
   protos::mapping::proto::Submap2D ToProto(
       bool include_grid_data) const override;
 
-  const Grid2D* grid() const { return grid_.get(); }
+  const Grid2D* grid() const override { return grid_.get(); }
 
   // Insert 'range_data' into this submap using 'range_data_inserter'. The
   // submap must not be finished yet.

@@ -1,14 +1,15 @@
-localization_node:
+map_builder:
   ros__parameters:
     frame_id: laser_odom
     imu_topic: /camera/imu
     odometry_topic: /odom_out
     laser_scan_topic: /scan
     map_save_path: /home/mi/mapping/
+    pose_save_path: /home/mi/mapping/pose.txt
     use_imu: true
     use_real_time_correlative_scan_matching: true
     num_accumulated: 1
-    use_filter: true
+    use_filter: false
     gravity_constant: 10.0
     pose_duration_time: 0.01
     max_time_seconds: 5.0
@@ -45,37 +46,35 @@ localization_node:
     imu_to_odom: [-1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0]
     laser_to_odom: [0.1793, 0.0, 0.0]
     pose_graph_param:
-     optimize_every_n_nodes: 90
-     max_num_final_iterations: 200
-     matcher_rotation_weight: 5e2
-     matcher_translation_weight: 1.6e3
-     max_submaps_maintain: 3
-     constraint_builder_param:
-      min_score: 0.55
-      reloc_min_score: 0.65
-      log_matches: true
-      loop_closure_rotation_weight: 1.e5
-      loop_closure_translation_weight: 1.1e4
-      max_constraint_distance: 2.
-      max_reloc_constraint_distance: 100.
-      ratio: 0.8
-      ceres_params:
-       max_num_iterations: 10
-       num_threads: 1
-       use_nonmonotonic_steps: true
-       occupied_space_weight: 20.
-       translation_weight: 10.
-       rotation_weight: 1.
-      fast_param:
-       branch_and_bound_depth: 7
-       angular_search_window: 0.26179939
-       linear_search_window: 7.
-     optimization_param:
-      huber_scale: 1e1
-      max_num_iterations: 50
-      num_threads: 7
-      report_full_summary: true
-    thread_num_pool: 4
-    start_location_service_name: start_location
-    stop_location_service_name: stop_location
-    is_vision_constraint: true
+      constraint_builder_param:
+        min_score: 0.55
+        log_matches: true
+        loop_closure_rotation_weight: 1.e5
+        loop_closure_translation_weight: 1.1e4
+        max_constraint_distance: 5.0
+        ratio: 0.3
+        ceres_params:
+          max_num_iterations: 10
+          num_threads: 1
+          use_nonmonotonic_steps: true
+          occupied_space_weight: 20.0
+          translation_weight: 10.0
+          rotation_weight: 1.0
+        fast_param:
+          branch_and_bound_depth: 7
+          angular_search_window: 0.26
+          linear_search_window: 7.0
+      optimization_param:
+        huber_scale: 1e1
+        max_num_iterations: 50
+        num_threads: 7
+        report_full_summary: true
+      optimize_every_n_nodes: 20
+      max_num_final_iterations: 200
+      matcher_rotation_weight: 5e2
+      matcher_translation_weight: 1.6e3
+      max_submaps_maintain: 0
+    start_mapping_service_name: start_mapping
+    stop_mapping_service_name: stop_mapping
+    init_width: 100000
+     

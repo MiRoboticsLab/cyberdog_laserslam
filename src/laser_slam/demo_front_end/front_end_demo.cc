@@ -14,6 +14,7 @@
 #include "laser_slam/final_map_generator.h"
 #include "laser_slam/base_data/grid_for_navigation.h"
 #include "laser_slam/base_data/pose_recorder.h"
+#include "laser_slam/base_data/submap_points_batch.h"
 #include "pose_graph/bundle_adjustment.h"
 #include "protos/proto_stream_interface.h"
 #include "protos/proto_stream.h"
@@ -28,7 +29,7 @@
 #include "laser_geometry/laser_geometry.hpp"
 #include "visualization/msg/matching_result.hpp"
 #include "tf2/buffer_core.h"
-
+using namespace std::chrono_literals;
 namespace cartographer {
 namespace laser_slam {
 class FrontEndDemo : public rclcpp::Node {
@@ -41,46 +42,10 @@ class FrontEndDemo : public rclcpp::Node {
         map_generator_(nullptr),
         thread_pool_(4),
         pose_graph_(nullptr),
-        pose_recorder_(nullptr) {}
+        pose_recorder_(nullptr),
+        map_process_thread_(nullptr) {}
 
-  virtual ~FrontEndDemo() {
-    // pose_graph_->RunFinalOptimization();
-    // protos::mapping::proto::PoseGraphHeader header;
-    // header.set_format_version(1);
-    // protos::mapping::proto::PoseGraph graph_proto =
-    //     pose_graph_->ToProto(0, true);
-    // std::string file_name = map_save_path_ + "graph.pbstream";
-    // stream::ProtoStreamWriter writer(file_name);
-    // writer.WriteProto(header);
-    // writer.WriteProto(graph_proto);
-    // CHECK(writer.Close());
-    // const auto pose_graph_data = pose_graph_->pose_graph_data();
-    // std::vector<sensor::RangeData> range_datas;
-    // auto begin_it = pose_graph_data.trajectory_nodes.BeginOfTrajectory(0);
-    // auto end_it = pose_graph_data.trajectory_nodes.EndOfTrajectory(0);
-    // for (; begin_it != end_it; ++begin_it) {
-    //   transform::Rigid3d local_to_global =
-    //       pose_graph_data.trajectory_nodes.at(begin_it->id).global_pose *
-    //       pose_graph_data.trajectory_nodes.at(begin_it->id)
-    //           .constant_data->local_pose.inverse();
-    //   auto range_data = id_data_.at(begin_it->id);
-    //   LOG(INFO) << "delta pose is: " << local_to_global.DebugString()
-    //             << "id is: " << begin_it->id.node_index;
-    //   auto pc =
-    //       sensor::TransformRangeData(range_data,
-    //       local_to_global.cast<float>());
-    //   range_datas.push_back(pc);
-    // }
-    // grid_->RayCastByProbability(range_datas);
-    // std::string map_name = map_save_path_ + "map";
-    // grid_->WritePgmByProbabilityGrid(map_name);
-    // // auto pb_grid = grid_->ToRosOccupancyMsg(0.05, frame_id_,
-    // //                                         rclcpp::Time::max(), false,
-    // "");
-
-    // pose_recorder_->Write(pose_graph_data.trajectory_nodes);
-    // pose_recorder_->Close();
-  }
+  virtual ~FrontEndDemo() {}
 
   bool Initialization() {
     // Get parameters from yaml
@@ -222,6 +187,11 @@ class FrontEndDemo : public rclcpp::Node {
     pose_graph_param.max_submaps_maintain = 0;
     pose_graph_.reset(new pose_graph::optimization::BundleAdjustment(
         pose_graph_param, &thread_pool_));
+    pose_graph_->SetSubmapCallback(
+        [this](const mapping::SubmapId& id,
+               const std::shared_ptr<const mapping::Submap>& data) {
+          SubmapTest(id, data);
+        });
     // subscribe and publisher initialization
     pose_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
         "laser_pose", 10);
@@ -229,6 +199,8 @@ class FrontEndDemo : public rclcpp::Node {
         "point_cloud", 10);
     scan_publisher_ = this->create_publisher<sensor_msgs::msg::LaserScan>(
         "intensity_scan", 10);
+    map_publisher_ =
+        this->create_publisher<nav_msgs::msg::OccupancyGrid>("map_test", 10);
 
     callback_imu_subscriber_ = this->create_callback_group(
         rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -289,10 +261,25 @@ class FrontEndDemo : public rclcpp::Node {
         new FinalMapGenerator(param.submap_param.probability_insert_param));
     grid_.reset(new GridForNavigation(
         0.05, param.submap_param.probability_insert_param));
+    start_ = true;
+    // if (not map_process_thread_) {
+    //   map_process_thread_.reset(
+    //       new std::thread(std::bind(&FrontEndDemo::SubmapPublish, this)));
+    // }
+
+    map_grow_.reset(new SubmapPointsBatch(0.05, 1000, 1000));
+    map_grow_->StartThread();
+    grid_publish_timer_ =
+        create_wall_timer(500ms, std::bind(&FrontEndDemo::SubmapPublish, this));
     return true;
   }
 
   bool Stop() {
+    start_ = false;
+    // if (map_process_thread_ && map_process_thread_->joinable()) {
+    //   map_process_thread_->join();
+    // }
+    map_grow_->QuitThread();
     pose_graph_->RunFinalOptimization();
     protos::mapping::proto::PoseGraphHeader header;
     header.set_format_version(1);
@@ -409,13 +396,6 @@ class FrontEndDemo : public rclcpp::Node {
       pose_pub.pose.position.x = tmp_result->local_pose.translation().x();
       pose_pub.pose.position.y = tmp_result->local_pose.translation().y();
       pose_pub.pose.position.z = tmp_result->local_pose.translation().z();
-      //   pose_pub.pose.orientation.x = 0.0138;
-      //   pose_pub.pose.orientation.y = -0.000217;
-      //   pose_pub.pose.orientation.z = -0.332;
-      //   pose_pub.pose.orientation.w = -0.94325;
-      //   pose_pub.pose.position.x = 1.021;
-      //   pose_pub.pose.position.y = 0.8613;
-      //   pose_pub.pose.position.z = 0.0;
       pose_publisher_->publish(pose_pub);
       pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
       pcl_cloud.points.resize(tmp_result->range_data_in_local.returns.size());
@@ -437,9 +417,30 @@ class FrontEndDemo : public rclcpp::Node {
       range_datas_.push_back(range);
     }
   }
+
+  void SubmapTest(const mapping::SubmapId& id,
+                  const std::shared_ptr<const mapping::Submap>& data) {
+    if (not pub_) pub_ = true;
+    map_grow_->AddSubmap(id, data);
+  }
+
+  void SubmapPublish() {
+    if (pub_) {
+      auto map = map_grow_->ros_grid();
+      map.header.frame_id = "laser_odom";
+      map_publisher_->publish(map);
+    }
+  }
+  bool start_ = false;
+  bool pub_ = false;
+  int count_ = 0;
+  std::deque<std::shared_ptr<const mapping::Submap>> maps_;
+  std::vector<nav_msgs::msg::OccupancyGrid> ros_maps_;
+  std::mutex map_lk_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_publisher_;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr map_publisher_;
   rclcpp::CallbackGroup::SharedPtr callback_odometry_subscriber_;
   rclcpp::CallbackGroup::SharedPtr callback_imu_subscriber_;
   rclcpp::CallbackGroup::SharedPtr callback_laser_subscriber_;
@@ -447,6 +448,7 @@ class FrontEndDemo : public rclcpp::Node {
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr
       laser_subscription_;
+  rclcpp::TimerBase::SharedPtr grid_publish_timer_;
   LocalSlamPtr local_slam_;
   std::string frame_id_;
   std::string map_save_path_;
@@ -461,6 +463,8 @@ class FrontEndDemo : public rclcpp::Node {
   pose_graph::optimization::BundleAdjustmentPtr pose_graph_;
   std::map<mapping::NodeId, sensor::RangeData> id_data_;
   std::shared_ptr<PoseRecorder> pose_recorder_;
+  std::shared_ptr<std::thread> map_process_thread_;
+  SubmapPointsBatchPtr map_grow_;
 };
 }  // namespace laser_slam
 

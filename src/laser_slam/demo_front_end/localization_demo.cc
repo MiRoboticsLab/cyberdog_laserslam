@@ -4,7 +4,6 @@
  * Author: Feixiang Zeng <zengfeixiang@xiaomi.com>
  *
  */
-
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -19,18 +18,27 @@
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "laser_geometry/laser_geometry.hpp"
+#include "std_srvs/srv/set_bool.hpp"
 #include "tf2/buffer_core.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
+#include "nav2_util/lifecycle_node.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
 
 namespace cartographer {
 namespace laser_slam {
-class LocalizationDemo : public rclcpp::Node {
+class LocalizationDemo : public nav2_util::LifecycleNode {
  public:
-  LocalizationDemo() : Node("localization"), localization_(nullptr) {}
+  LocalizationDemo()
+      : nav2_util::LifecycleNode("localization"),
+        reloc_id_(0),
+        localization_(nullptr),
+        reloc_thread_(nullptr) {}
   virtual ~LocalizationDemo() {}
 
-  bool Initialization() {
+ protected:
+  nav2_util::CallbackReturn on_configure(
+      const rclcpp_lifecycle::State& state) override {
     // Get parameters from yaml
     LocalSlamParam param;
     std::string frame_id("");
@@ -230,6 +238,9 @@ class LocalizationDemo : public rclcpp::Node {
     translation << l_t_o[0], l_t_o[1], l_t_o[2];
     laser_t_odom_ = transform::Rigid3d::Translation(translation);
     LOG(INFO) << "laser to odom is: " << laser_t_odom_.DebugString();
+    reloc_client_ =
+        this->create_client<cyberdog_visions_interfaces::srv::Reloc>(
+            "reloc_service");
     localization_->Initialize();
     pose_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
         "laser_pose", 10);
@@ -241,14 +252,70 @@ class LocalizationDemo : public rclcpp::Node {
         [this](const transform::Rigid3d& pose, const sensor::RangeData& pc) {
           PosePcCallBack(pose, pc);
         });
+
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
-    return true;
+
+    // Localization Service with start and stop
+    std::string start_location_service_name;
+    this->declare_parameter("start_location_service_name");
+    this->get_parameter("start_location_service_name",
+                        start_location_service_name);
+
+    start_location_service_ = create_service<std_srvs::srv::SetBool>(
+        start_location_service_name,
+        std::bind(&LocalizationDemo::StartLocationCallback, this,
+                  std::placeholders::_1, std::placeholders::_2));
+
+    std::string stop_location_service_name;
+    this->declare_parameter("stop_location_service_name");
+    this->get_parameter("stop_location_service_name",
+                        stop_location_service_name);
+    stop_location_service_ = create_service<std_srvs::srv::SetBool>(
+        stop_location_service_name,
+        std::bind(&LocalizationDemo::StopLocationCallback, this,
+                  std::placeholders::_1, std::placeholders::_2));
+
+    if (not reloc_thread_)
+      reloc_thread_.reset(new std::thread(
+          std::bind(&LocalizationDemo::RelocPoseRequest, this)));
+    else
+      LOG(WARNING) << "reloc thread already exist";
+    return nav2_util::CallbackReturn::SUCCESS;
   }
 
-  bool Stop() { return localization_->Stop(); }
+  nav2_util::CallbackReturn on_activate(
+      const rclcpp_lifecycle::State& state) override {
+    pose_publisher_->on_activate();
+    pc_publisher_->on_activate();
+    odom_publisher_->on_activate();
+    createBond();
+    return nav2_util::CallbackReturn::SUCCESS;
+  }
+
+  nav2_util::CallbackReturn on_deactivate(
+      const rclcpp_lifecycle::State& state) override {
+    localization_->Stop();
+    pc_publisher_->on_deactivate();
+    pose_publisher_->on_deactivate();
+    odom_publisher_->on_deactivate();
+    destroyBond();
+    return nav2_util::CallbackReturn::SUCCESS;
+  }
+
+  nav2_util::CallbackReturn on_cleanup(
+      const rclcpp_lifecycle::State& state) override {
+    localization_.reset();
+    return nav2_util::CallbackReturn::SUCCESS;
+  }
+
+  nav2_util::CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) {
+    LOG(INFO) << "Shutting Down";
+    return nav2_util::CallbackReturn::SUCCESS;
+  }
 
  private:
   void ImuCallBack(const sensor_msgs::msg::Imu::SharedPtr imu) {
+    if (not is_on_active_status_) return;
     sensor::ImuData imu_meas;
     Eigen::Vector3d acc, gyro;
     acc << imu->linear_acceleration.x, imu->linear_acceleration.y,
@@ -265,6 +332,7 @@ class LocalizationDemo : public rclcpp::Node {
     localization_->AddImuData(imu_meas);
   }
   void OdomCallback(const nav_msgs::msg::Odometry::SharedPtr odom) {
+    if (not is_on_active_status_) return;
     Eigen::Vector3d position;
     Eigen::Quaterniond angular;
     position << odom->pose.pose.position.x, odom->pose.pose.position.y, 0.0;
@@ -282,6 +350,7 @@ class LocalizationDemo : public rclcpp::Node {
     localization_->AddOdometryData(odom_meas);
   }
   void LaserCallBack(const sensor_msgs::msg::LaserScan::SharedPtr laser) {
+    if (not is_on_active_status_) return;
     std::vector<sensor::RangefinderPoint> points;
     sensor_msgs::msg::PointCloud2 cloud;
     common::Time time =
@@ -302,6 +371,14 @@ class LocalizationDemo : public rclcpp::Node {
       points.push_back(transformed_pt);
     }
     sensor::PointCloud pc(time, points);
+    if (localization_->state() == State::RELOCATION) {
+      // Relocate job add
+      {
+        std::unique_lock<std::mutex> lk(job_mutex_);
+        jobs_.push_back(LoopJob());
+        job_condvar_.notify_all();
+      }
+    }
     localization_->AddRangeData(pc);
   }
 
@@ -367,10 +444,127 @@ class LocalizationDemo : public rclcpp::Node {
     // Send the transformation
     tf_broadcaster_->sendTransform(t);
   }
-  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_publisher_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc_publisher_;
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher_;
-  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr map_publisher_;
+
+  void StartLocationCallback(
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
+    if (get_current_state().id() !=
+        lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
+      LOG(ERROR) << "Recieved Trigger Location request But not in active "
+                    "state, Ignoring!!!";
+      return;
+    }
+    is_on_active_status_ = request->data;
+    response->success = true;
+  }
+
+  void StopLocationCallback(
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
+    if (get_current_state().id() !=
+        lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
+      LOG(ERROR) << "Recieved Stop Location request But not in active state, "
+                    "Ignoring!!!!";
+      return;
+    }
+    is_on_active_status_ = false;
+    if (reloc_thread_ && reloc_thread_->joinable()) {
+      reloc_thread_->join();
+    }
+    bool success = localization_->Stop();
+    response->success = success;
+  }
+
+  void RelocPoseRequest() {
+    while (true) {
+      if (not is_on_active_status_) {
+        usleep(1000);
+      } else if (reloc_client_ == nullptr) {
+        RelocPose pose;
+        pose.pose = transform::Rigid3d::Identity();
+        pose.time = common::Time::max();
+        auto reloc_pose = std::make_shared<RelocPose>(pose);
+        localization_->GetInitialPose(reloc_pose);
+        return;
+      } else {
+        LoopJob job;
+        {
+          std::unique_lock<std::mutex> lk(job_mutex_);
+          while (jobs_.empty() && is_on_active_status_) job_condvar_.wait(lk);
+
+          if (!is_on_active_status_) return;
+
+          job = jobs_.front();
+
+          jobs_.pop_front();
+        }
+        if (job.type == LoopJob::INIT_LOCATION) {
+          RelocPose pose_init;
+          bool success = Request(&pose_init);
+          if (success) {
+            auto reloc_pose = std::make_shared<RelocPose>(pose_init);
+            localization_->GetInitialPose(reloc_pose);
+          }
+        }
+        if (job.type == LoopJob::NORMAL_LOCATION) {
+          // Norm find constraint by vision
+        }
+      }
+    }
+  }
+
+  bool Request(RelocPose* pose) {
+    auto request =
+        std::make_shared<cyberdog_visions_interfaces::srv::Reloc::Request>();
+    request->reloc_id = reloc_id_;
+    while (!reloc_client_->wait_for_service(1s)) {
+      if (!rclcpp::ok()) {
+        LOG(ERROR) << "Interrupted while waiting for the service, Exiting";
+        return false;
+      }
+      LOG(INFO) << "Service not available, waiting again";
+    }
+    auto result = reloc_client_->async_send_request(request);
+    // auto status = result.wait_for(5s);
+    sleep(5);
+    LOG(INFO) << "wait ended";
+    RelocPose pose_result;
+    if (result.valid()) {
+      auto r_pose = result.get()->pose;
+      Eigen::Quaterniond rotation;
+      rotation.x() = r_pose.pose.orientation.x;
+      rotation.y() = r_pose.pose.orientation.y;
+      rotation.z() = r_pose.pose.orientation.z;
+      rotation.w() = r_pose.pose.orientation.w;
+      Eigen::Vector3d translation;
+      translation.x() = r_pose.pose.position.x;
+      translation.y() = r_pose.pose.position.y;
+      translation.z() = r_pose.pose.position.z;
+      pose_result.pose.Rotation(rotation);
+      pose_result.pose.Translation(translation);
+      pose_result.time = common::Time::max();
+      LOG(INFO) << "get reloc pose" << pose_result.pose.DebugString();
+      *pose = pose_result;
+    } else {
+      LOG(ERROR) << "Failed to get response";
+      return false;
+    }
+    return true;
+  }
+
+  bool is_on_active_status_ = false;
+  int reloc_id_;
+  std::mutex job_mutex_;
+  rclcpp::Client<cyberdog_visions_interfaces::srv::Reloc>::SharedPtr
+      reloc_client_;
+  rclcpp_lifecycle::LifecyclePublisher<
+      geometry_msgs::msg::PoseStamped>::SharedPtr pose_publisher_;
+  rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::PointCloud2>::SharedPtr
+      pc_publisher_;
+  rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Odometry>::SharedPtr
+      odom_publisher_;
+  rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::OccupancyGrid>::SharedPtr
+      map_publisher_;
   rclcpp::CallbackGroup::SharedPtr callback_odometry_subscriber_;
   rclcpp::CallbackGroup::SharedPtr callback_imu_subscriber_;
   rclcpp::CallbackGroup::SharedPtr callback_laser_subscriber_;
@@ -385,6 +579,11 @@ class LocalizationDemo : public rclcpp::Node {
   transform::Rigid3d laser_t_odom_;
   std::string odom_frame_id_;
   std::string base_link_frame_id_;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_location_service_;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr stop_location_service_;
+  std::shared_ptr<std::thread> reloc_thread_;
+  std::condition_variable job_condvar_;
+  JobQueue jobs_;
 };
 
 }  // namespace laser_slam
@@ -397,11 +596,7 @@ int main(int argc, char** argv) {
   rclcpp::executors::MultiThreadedExecutor executor;
   std::shared_ptr<cartographer::laser_slam::LocalizationDemo> local_slam =
       std::make_shared<cartographer::laser_slam::LocalizationDemo>();
-  local_slam->Initialization();
-  executor.add_node(local_slam);
-  executor.spin();
+  rclcpp::spin(local_slam->get_node_base_interface());
   rclcpp::shutdown();
-
-  local_slam->Stop();
   return 0;
 }
