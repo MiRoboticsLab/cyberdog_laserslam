@@ -22,6 +22,8 @@
   <depend>rviz_display</depend>
   <depend>pcl_msgs</depend>
 
+  <depend>cyberdog_visions_interfaces</depend>
+
 
   <export>
     <build_type>ament_cmake</build_type>
