@@ -617,6 +617,7 @@ void LocalizationNode::RelocLoop() {
       } else {
         usleep(1000);
       }
+      if (!is_on_active_status_) return;
     } else {
       LoopJob job;
       {
