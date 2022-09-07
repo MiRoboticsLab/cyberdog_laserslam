@@ -10,6 +10,9 @@
  */
 #ifndef LASER_SLAM_MAP_BUILD_NODE_H_
 #define LASER_SLAM_MAP_BUILD_NODE_H_
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "common/thread_pool.h"
 #include "laser_slam/local_slam.h"
 #include "laser_slam/final_map_generator.h"
@@ -79,6 +82,8 @@ class MapBuildNode : public nav2_util::LifecycleNode {
   void SubmapCallback(const mapping::SubmapId& id,
                       const std::shared_ptr<const mapping::Submap>& data);
 
+  bool CheckDirectory(const std::string& path);
+
   bool is_on_active_status_;
   double map_publish_period_sec_;
   rclcpp_lifecycle::LifecyclePublisher<
@@ -111,7 +116,7 @@ class MapBuildNode : public nav2_util::LifecycleNode {
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_mapping_service_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr stop_mapping_service_;
   rclcpp::TimerBase::SharedPtr grid_publish_timer_;
-   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 };
 }  // namespace laser_slam
 }  // namespace cartographer
