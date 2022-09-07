@@ -409,6 +409,11 @@ bool MapBuildNode::SaveMap(bool save_map) {
   map_display_->QuitThread();
   pose_graph_->RunFinalOptimization();
   if (save_map) {
+    bool suc = CheckDirectory(map_save_path_);
+    if (not suc) {
+      LOG(WARNING) << "Directory make have problem";
+      return false;
+    }
     protos::mapping::proto::PoseGraphHeader header;
     header.set_format_version(1);
     protos::mapping::proto::PoseGraph graph_proto =
@@ -619,6 +624,19 @@ void MapBuildNode::SubmapCallback(
     const mapping::SubmapId& id,
     const std::shared_ptr<const mapping::Submap>& data) {
   map_display_->AddSubmap(id, data);
+}
+
+bool MapBuildNode::CheckDirectory(const std::string& path) {
+  int result = access(path.c_str(), 0);
+  if (result != 0) {
+    LOG(INFO) << "Directory not exist, Make dir for it";
+    int ret = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    if (ret != 0) {
+      LOG(WARNING) << "Make directory failed";
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace laser_slam
