@@ -25,6 +25,8 @@
 #include <thread>
 
 #include "cyberdog_visions_interfaces/srv/reloc.hpp"
+#include "nav2_util/lifecycle_node.hpp"
+#include "std_msgs/msg/int32.hpp"
 
 #include "laser_slam/map_loader.h"
 #include "laser_slam/local_slam.h"
@@ -78,6 +80,9 @@ class Localization {
 
   void GetRelocPose(const mapping::NodeId& id, const RelocPose& pose);
 
+  void SetRelocPublisher(const rclcpp_lifecycle::LifecyclePublisher<
+                         std_msgs::msg::Int32>::SharedPtr& publisher);
+
   State state() { return state_; }
 
  private:
@@ -98,6 +103,8 @@ class Localization {
   MapLoaderPtr map_loader_;
   PosePcCallback pose_pc_callback_;  // For visualize and pub tf
   transform::Rigid3d first_reloc_pose_;
+  rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::Int32>::SharedPtr
+      reloc_publisher_;
 };
 typedef std::shared_ptr<Localization> LocalizationPtr;
 typedef std::shared_ptr<const Localization> LocalizationConstPtr;

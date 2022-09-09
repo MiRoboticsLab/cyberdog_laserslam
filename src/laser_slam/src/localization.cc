@@ -28,6 +28,12 @@ bool Localization::Stop() {
   return true;
 }
 
+void Localization::SetRelocPublisher(
+    const rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::Int32>::SharedPtr&
+        publisher) {
+  reloc_publisher_ = publisher;
+}
+
 void Localization::SetCallback(const PosePcCallback& callback) {
   pose_pc_callback_ = callback;
 }
@@ -105,12 +111,17 @@ void Localization::AddRangeData(const sensor::PointCloud& timed_point_cloud) {
             pose_graph::optimization::TrajectoryNode{constant_data, pose});
     is_reloc_ = pose_graph_->FindRelocConstraints(node, trajectory_id_,
                                                   &optimized_pose);
+    std_msgs::msg::Int32 reloc_result;
     if (!is_reloc_) {
       LOG(WARNING) << "Reloc falied because failure of scan match to old map";
       state_ = State::RELOCATION;
       reloc_pose_ = nullptr;
+      reloc_result.data = 100;
+      reloc_publisher_->publish(reloc_result);
       return;
     } else {
+      reloc_result.data = 0;
+      reloc_publisher_->publish(reloc_result);
       LOG(INFO) << "Reloc success, Connect new node to old pose graph";
       first_reloc_pose_ = optimized_pose;
       local_slam_.reset(new LocalSlam(param_.local_slam_param));

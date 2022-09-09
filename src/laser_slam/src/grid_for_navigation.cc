@@ -151,7 +151,17 @@ void GridForNavigation::WritePgmByProbabilityGrid(const std::string& filestem) {
   for (int y = 0; y < height; ++y) {
     for (int x = 0; x < width; ++x) {
       const int32 color = data[y * width + x];
-      const char v = color;
+      int v_t;
+      if (color == 128) {
+        v_t = 128;
+      } else {
+        if (color > 100) {
+          v_t = 255;
+        } else {
+          v_t = 0;
+        }
+      }
+      const char v = v_t;
       pgm_writer.Write(&v, 1);
     }
   }
