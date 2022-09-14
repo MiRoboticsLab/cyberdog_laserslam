@@ -78,4 +78,4 @@ localization_node:
     thread_num_pool: 4
     start_location_service_name: start_location
     stop_location_service_name: stop_location
-    is_vision_constraint: true
+    is_vision_constraint: false
