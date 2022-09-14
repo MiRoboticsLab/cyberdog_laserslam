@@ -18,6 +18,7 @@
 #include "laser_slam/localization.h"
 
 #include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/int32.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -94,6 +95,8 @@ class LocalizationNode : public nav2_util::LifecycleNode {
       pc_publisher_;
   rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Odometry>::SharedPtr
       odom_publisher_;
+  rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::Int32>::SharedPtr
+      reloc_publisher_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   rclcpp::CallbackGroup::SharedPtr callback_odometry_subscriber_;
   rclcpp::CallbackGroup::SharedPtr callback_imu_subscriber_;

@@ -97,10 +97,10 @@ ProbabilityGrid::ToRosOccupancyMsg(double resolution,
         if (color == 128) {
           v = -1;
         } else {
-          if (color > 150) {
-            v = 1;
-          } else {
+          if (color > 128) {
             v = 0;
+          } else {
+            v = 100;
           }
         }
         const int value =

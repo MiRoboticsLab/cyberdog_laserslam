@@ -341,6 +341,9 @@ nav2_util::CallbackReturn LocalizationNode::on_configure(
       [this](const transform::Rigid3d& pose, const sensor::RangeData& pc) {
         PosePcCallBack(pose, pc);
       });
+  reloc_publisher_ =
+      this->create_publisher<std_msgs::msg::Int32>("laser_reloc_result", 10);
+  localization_->SetRelocPublisher(reloc_publisher_);
 
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
   std::string start_location_service_name;
@@ -373,6 +376,7 @@ nav2_util::CallbackReturn LocalizationNode::on_activate(
   pose_publisher_->on_activate();
   pc_publisher_->on_activate();
   odom_publisher_->on_activate();
+  reloc_publisher_->on_activate();
   createBond();
   return nav2_util::CallbackReturn::SUCCESS;
 }
@@ -383,6 +387,7 @@ nav2_util::CallbackReturn LocalizationNode::on_deactivate(
   pc_publisher_->on_deactivate();
   pose_publisher_->on_deactivate();
   odom_publisher_->on_deactivate();
+  reloc_publisher_->on_deactivate();
   destroyBond();
   return nav2_util::CallbackReturn::SUCCESS;
 }
