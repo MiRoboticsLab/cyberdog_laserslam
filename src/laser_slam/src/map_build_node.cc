@@ -345,11 +345,15 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
   std::string stop_mapping_service_name;
   this->declare_parameter("stop_mapping_service_name");
   this->get_parameter("stop_mapping_service_name", stop_mapping_service_name);
-  stop_mapping_service_ = create_service<std_srvs::srv::SetBool>(
+  //   stop_mapping_service_ = create_service<std_srvs::srv::SetBool>(
+  //       stop_mapping_service_name,
+  //       std::bind(&MapBuildNode::StopMappingCallback, this,
+  //       std::placeholders::_1,
+  //                 std::placeholders::_2));
+  stop_service_ = create_service<visualization::srv::Stop>(
       stop_mapping_service_name,
       std::bind(&MapBuildNode::StopMappingCallback, this, std::placeholders::_1,
                 std::placeholders::_2));
-
   // Grow map for display
   int width;
   this->declare_parameter("init_width");
@@ -405,7 +409,7 @@ nav2_util::CallbackReturn MapBuildNode::on_shutdown(
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
-bool MapBuildNode::SaveMap(bool save_map) {
+bool MapBuildNode::SaveMap(bool save_map, const std::string& map_name) {
   map_display_->QuitThread();
   pose_graph_->RunFinalOptimization();
   if (save_map) {
@@ -440,8 +444,8 @@ bool MapBuildNode::SaveMap(bool save_map) {
       range_datas.push_back(pc);
     }
     grid_->RayCastByProbability(range_datas);
-    std::string map_name = map_save_path_ + "map";
-    grid_->WritePgmByProbabilityGrid(map_name);
+    std::string map_pt = map_save_path_ + map_name;
+    grid_->WritePgmByProbabilityGrid(map_pt);
     pose_recorder_->Write(pose_graph_data.trajectory_nodes);
     pose_recorder_->Close();
   }
@@ -462,8 +466,8 @@ void MapBuildNode::StartMappingCallback(
 }
 
 void MapBuildNode::StopMappingCallback(
-    const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-    std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
+    const std::shared_ptr<visualization::srv::Stop::Request> request,
+    std::shared_ptr<visualization::srv::Stop::Response> response) {
   if (get_current_state().id() !=
       lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
     LOG(ERROR) << "Received Stop Mapping request But not in active state, "
@@ -471,7 +475,7 @@ void MapBuildNode::StopMappingCallback(
     return;
   }
   is_on_active_status_ = false;
-  bool success = SaveMap(request->data);
+  bool success = SaveMap(request->finish, request->map_name);
   response->success = success;
 }
 
@@ -614,7 +618,7 @@ void MapBuildNode::LaserCallBack(
 }
 
 void MapBuildNode::DisplayMapPublishPeriod() {
-  if (not map_display_->is_grid()) return;
+  if (not map_display_->is_grid() || not is_on_active_status_) return;
   auto map = map_display_->ros_grid();
   map.header.frame_id = frame_id_;
   map_publisher_->publish(map);
