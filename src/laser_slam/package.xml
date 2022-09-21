@@ -23,6 +23,7 @@
   <depend>pcl_msgs</depend>
   <depend>cyberdog_visions_interfaces</depend>
   <depend>nav2_util</depend>
+  <depend>visualization</depend>
 
 
   <export>

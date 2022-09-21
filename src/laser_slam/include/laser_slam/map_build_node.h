@@ -32,6 +32,7 @@
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "std_srvs/srv/trigger.hpp"
 #include "std_srvs/srv/set_bool.hpp"
+#include "visualization/srv/stop.hpp"
 #include "laser_geometry/laser_geometry.hpp"
 #include "tf2/buffer_core.h"
 #include "tf2/LinearMath/Quaternion.h"
@@ -72,10 +73,10 @@ class MapBuildNode : public nav2_util::LifecycleNode {
 
   // Stop mapping service with bool value to determine if save map or not
   void StopMappingCallback(
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response);
+      const std::shared_ptr<visualization::srv::Stop::Request> request,
+      std::shared_ptr<visualization::srv::Stop::Response> response);
 
-  bool SaveMap(bool save_map);
+  bool SaveMap(bool save_map, const std::string& map_name);
 
   void DisplayMapPublishPeriod();
 
@@ -114,7 +115,8 @@ class MapBuildNode : public nav2_util::LifecycleNode {
   transform::Rigid3d laser_t_odom_;
   laser_geometry::LaserProjection projector_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_mapping_service_;
-  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr stop_mapping_service_;
+  //   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr stop_mapping_service_;
+  rclcpp::Service<visualization::srv::Stop>::SharedPtr stop_service_;
   rclcpp::TimerBase::SharedPtr grid_publish_timer_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 };
