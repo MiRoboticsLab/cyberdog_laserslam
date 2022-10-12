@@ -273,6 +273,7 @@ nav2_util::CallbackReturn LocalizationNode::on_configure(
   this->get_parameter("thread_num_pool", localization_param.thread_num_pool);
   LOG(INFO) << "thread pool num is: " << localization_param.thread_num_pool;
   localization_.reset(new Localization(localization_param));
+  localization_param_ = localization_param;
   bool is_vision_constraint = false;
   this->declare_parameter("is_vision_constraint");
   this->get_parameter("is_vision_constraint", is_vision_constraint);
@@ -330,20 +331,14 @@ nav2_util::CallbackReturn LocalizationNode::on_configure(
   translation << l_t_o[0], l_t_o[1], l_t_o[2];
   laser_t_odom_ = transform::Rigid3d::Translation(translation);
 
-  localization_->Initialize();
   pose_publisher_ =
       this->create_publisher<geometry_msgs::msg::PoseStamped>("laser_pose", 10);
   pc_publisher_ =
       this->create_publisher<sensor_msgs::msg::PointCloud2>("point_cloud", 10);
   odom_publisher_ =
       this->create_publisher<nav_msgs::msg::Odometry>("odometry", 10);
-  localization_->SetCallback(
-      [this](const transform::Rigid3d& pose, const sensor::RangeData& pc) {
-        PosePcCallBack(pose, pc);
-      });
   reloc_publisher_ =
       this->create_publisher<std_msgs::msg::Int32>("laser_reloc_result", 10);
-  localization_->SetRelocPublisher(reloc_publisher_);
 
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
   std::string start_location_service_name;
@@ -363,16 +358,22 @@ nav2_util::CallbackReturn LocalizationNode::on_configure(
       stop_location_service_name,
       std::bind(&LocalizationNode::StopLocationCallback, this,
                 std::placeholders::_1, std::placeholders::_2));
-  if (not reloc_thread_)
-    reloc_thread_.reset(
-        new std::thread(std::bind(&LocalizationNode::RelocLoop, this)));
-  else
-    LOG(WARNING) << "Reloc Thread already exist";
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
 nav2_util::CallbackReturn LocalizationNode::on_activate(
     const rclcpp_lifecycle::State& state) {
+  localization_->SetRelocPublisher(reloc_publisher_);
+  localization_->SetCallback(
+      [this](const transform::Rigid3d& pose, const sensor::RangeData& pc) {
+        PosePcCallBack(pose, pc);
+      });
+  localization_->Initialize();
+  if (not reloc_thread_)
+    reloc_thread_.reset(
+        new std::thread(std::bind(&LocalizationNode::RelocLoop, this)));
+  else
+    LOG(WARNING) << "Reloc Thread already exist";
   pose_publisher_->on_activate();
   pc_publisher_->on_activate();
   odom_publisher_->on_activate();
@@ -384,6 +385,8 @@ nav2_util::CallbackReturn LocalizationNode::on_activate(
 nav2_util::CallbackReturn LocalizationNode::on_deactivate(
     const rclcpp_lifecycle::State& state) {
   localization_->Stop();
+  localization_.reset(new Localization(localization_param_));
+  reloc_thread_ = nullptr;
   pc_publisher_->on_deactivate();
   pose_publisher_->on_deactivate();
   odom_publisher_->on_deactivate();
