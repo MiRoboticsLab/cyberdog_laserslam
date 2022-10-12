@@ -17,6 +17,7 @@ int main(int argc, char** argv) {
   rclcpp::executors::MultiThreadedExecutor executor;
   std::shared_ptr<cartographer::laser_slam::LocalizationNode> localization =
       std::make_shared<cartographer::laser_slam::LocalizationNode>();
-  rclcpp::spin(localization->get_node_base_interface());
+  executor.add_node(localization->get_node_base_interface());
+  executor.spin();
   rclcpp::shutdown();
 }

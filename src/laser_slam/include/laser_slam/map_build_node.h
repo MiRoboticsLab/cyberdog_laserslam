@@ -87,6 +87,8 @@ class MapBuildNode : public nav2_util::LifecycleNode {
 
   bool is_on_active_status_;
   double map_publish_period_sec_;
+  LocalSlamParam local_slam_param_;
+  PoseGraph2DParam pose_graph_param_;
   rclcpp_lifecycle::LifecyclePublisher<
       geometry_msgs::msg::PoseStamped>::SharedPtr pose_publisher_;
   rclcpp_lifecycle::LifecyclePublisher<sensor_msgs::msg::PointCloud2>::SharedPtr
