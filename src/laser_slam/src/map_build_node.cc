@@ -132,6 +132,7 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
       "real_time_correlative_scan_matching_param.rotation_delta_cost_weight",
       param.real_time_param.rotation_delta_cost_weight);
   local_slam_.reset(new LocalSlam(param));
+  local_slam_param_ = param;
 
   // Get Parameters of pose graph and init it
   ConstraintBuilderParam constraint_param;
@@ -258,7 +259,7 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
   this->declare_parameter("pose_graph_param.max_submaps_maintain");
   this->get_parameter("pose_graph_param.max_submaps_maintain",
                       pose_graph_param.max_submaps_maintain);
-
+  pose_graph_param_ = pose_graph_param;
   pose_graph_.reset(new pose_graph::optimization::BundleAdjustment(
       pose_graph_param, &thread_pool_));
 
@@ -360,7 +361,6 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
   this->get_parameter("init_width", width);
   map_display_.reset(
       new SubmapPointsBatch(param.submap_param.resolution, width, width));
-  map_display_->StartThread();
 
   pose_graph_->SetSubmapCallback(
       [this](const mapping::SubmapId& id,
@@ -380,6 +380,7 @@ nav2_util::CallbackReturn MapBuildNode::on_activate(
   pc_publisher_->on_activate();
   pose_publisher_->on_activate();
   map_publisher_->on_activate();
+  map_display_->StartThread();
   createBond();
   return nav2_util::CallbackReturn::SUCCESS;
 }
@@ -389,6 +390,19 @@ nav2_util::CallbackReturn MapBuildNode::on_deactivate(
   pc_publisher_->on_deactivate();
   pose_publisher_->on_deactivate();
   map_publisher_->on_deactivate();
+  pose_graph_.reset(new pose_graph::optimization::BundleAdjustment(
+      pose_graph_param_, &thread_pool_));
+  pose_graph_->SetSubmapCallback(
+      [this](const mapping::SubmapId& id,
+             const std::shared_ptr<const mapping::Submap>& data) {
+        SubmapCallback(id, data);
+      });
+  id_data_.clear();
+  local_slam_.reset(new LocalSlam(local_slam_param_));
+  grid_.reset(new GridForNavigation(
+      0.05, local_slam_param_.submap_param.probability_insert_param));
+  map_display_.reset(new SubmapPointsBatch(0.05, 1000, 1000));
+  LOG(INFO) << "deactive success";
   destroyBond();
   return nav2_util::CallbackReturn::SUCCESS;
 }
