@@ -31,7 +31,7 @@ import os
 def generate_launch_description():
     share_dir = get_package_share_directory('laser_slam')
     parameter_file = LaunchConfiguration('params_file')
-
+    namespace = LaunchConfiguration('namespace',default='')
     imu_topic = LaunchConfiguration('imu_topic')
     param_substitutions = {
         'imu_topic': imu_topic
@@ -39,7 +39,7 @@ def generate_launch_description():
     
     configured_params = RewrittenYaml(
             source_file=parameter_file,
-            root_key=get_namespace(),
+            root_key=namespace,
             param_rewrites=param_substitutions,
             convert_types=True)
 
@@ -55,7 +55,7 @@ def generate_launch_description():
                                 emulate_tty=True,
                                 #prefix=['xterm -e gdb  --args'],
                                 parameters=[configured_params],
-                                namespace=get_namespace(),
+                                namespace=namespace,
                                 )
 
     return LaunchDescription([
