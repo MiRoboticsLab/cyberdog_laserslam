@@ -14,6 +14,7 @@
 
 from http.server import executable
 from ament_index_python.packages import get_package_share_directory
+from mi.cyberdog_bringup.manual import get_namespace
 
 from launch import LaunchDescription
 from launch_ros.actions import LifecycleNode
@@ -21,6 +22,7 @@ from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch.actions import LogInfo
+from nav2_common.launch import RewrittenYaml
 
 import lifecycle_msgs.msg
 import os
@@ -29,6 +31,17 @@ import os
 def generate_launch_description():
     share_dir = get_package_share_directory('laser_slam')
     parameter_file = LaunchConfiguration('params_file')
+
+    imu_topic = LaunchConfiguration('imu_topic')
+    param_substitutions = {
+        'imu_topic': imu_topic
+    }
+    
+    configured_params = RewrittenYaml(
+            source_file=parameter_file,
+            root_key=get_namespace(),
+            param_rewrites=param_substitutions,
+            convert_types=True)
 
     params_declare = DeclareLaunchArgument('params_file',
                                            default_value=os.path.join(
@@ -41,11 +54,14 @@ def generate_launch_description():
                                 output='screen',
                                 emulate_tty=True,
                                 #prefix=['xterm -e gdb  --args'],
-                                parameters=[parameter_file],
-                                namespace='/',
+                                parameters=[configured_params],
+                                namespace=get_namespace(),
                                 )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'imu_topic', default_value='/camera/imu',
+            description='Use simulation (Gazebo) clock if true'),
         params_declare,
         driver_node,
     ])
