@@ -41,13 +41,12 @@ void Localization::SetCallback(const PosePcCallback& callback) {
 bool Localization::Initialize() {
   pose_graph_.reset(new pose_graph::optimization::BundleAdjustment(
       param_.pose_graph_param, &thread_pool_));
-  LOG(INFO) << "file path is: " << param_.pbstream_file_path;
+  LOG_IF(ERROR, param_.pbstream_file_path.empty())
+      << "Pbstream Path Wrong, which is: " << param_.pbstream_file_path;
   stream::ProtoStreamReader reader(param_.pbstream_file_path);
   stream::ProtoStreamDeserializer deserializer(&reader);
   map_loader_ = std::make_shared<MapLoader>(deserializer);
   InitialPoseGraph();
-  LOG(INFO) << "initial pose graph end";
-
   LOG(INFO) << "Initialize done";
   state_ = State::RELOCATION;
   return true;
@@ -143,7 +142,7 @@ void Localization::AddRangeData(const sensor::PointCloud& timed_point_cloud) {
       return;
     }
   } else if (state_ == State::RELOCATING) {
-    LOG(INFO) << "Relocating, Please wait moment";
+    LOG_EVERY_N(INFO, 5) << "Relocating, Please wait moment";
     return;
   } else if (state_ == State::LOCATION) {
     // Location phase

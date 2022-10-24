@@ -13,9 +13,6 @@ namespace cartographer {
 namespace sensor {
 RangeData TransformRangeData(const RangeData& range_data,
                              const transform::Rigid3f& transform) {
-  LOG(INFO) << "origin is: " << range_data.origin.transpose()
-            << "transform is: " << transform.DebugString() << "  "
-            << (transform * range_data.origin).transpose();
   return RangeData{
       transform * range_data.origin,
       TransformPointCloud(range_data.returns, transform),

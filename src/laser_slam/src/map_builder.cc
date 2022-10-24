@@ -404,7 +404,8 @@ void MapBuilderNode::SaveFinalMap() {
         pose_graph_data.trajectory_nodes.at(begin_it->id)
             .constant_data->local_pose.inverse();
     auto range_data = id_local_range_data_.at(begin_it->id);
-    LOG(INFO) << "delta pose is: " << local_to_global.DebugString();
+    LOG_IF(WARNING, local_to_global.translation().norm() > 10.0)
+        << "delta pose is: " << local_to_global.DebugString();
     auto pc =
         sensor::TransformRangeData(range_data, local_to_global.cast<float>());
     range_datas.push_back(range_data);

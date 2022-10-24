@@ -346,11 +346,6 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
   std::string stop_mapping_service_name;
   this->declare_parameter("stop_mapping_service_name");
   this->get_parameter("stop_mapping_service_name", stop_mapping_service_name);
-  //   stop_mapping_service_ = create_service<std_srvs::srv::SetBool>(
-  //       stop_mapping_service_name,
-  //       std::bind(&MapBuildNode::StopMappingCallback, this,
-  //       std::placeholders::_1,
-  //                 std::placeholders::_2));
   stop_service_ = create_service<visualization::srv::Stop>(
       stop_mapping_service_name,
       std::bind(&MapBuildNode::StopMappingCallback, this, std::placeholders::_1,
@@ -451,8 +446,6 @@ bool MapBuildNode::SaveMap(bool save_map, const std::string& map_name) {
           pose_graph_data.trajectory_nodes.at(begin_it->id)
               .constant_data->local_pose.inverse();
       auto range_data = id_data_.at(begin_it->id);
-      LOG(INFO) << "delta pose is: " << local_to_global.DebugString()
-                << "id is: " << begin_it->id.node_index;
       auto pc =
           sensor::TransformRangeData(range_data, local_to_global.cast<float>());
       range_datas.push_back(pc);
@@ -462,6 +455,8 @@ bool MapBuildNode::SaveMap(bool save_map, const std::string& map_name) {
     grid_->WritePgmByProbabilityGrid(map_pt);
     pose_recorder_->Write(pose_graph_data.trajectory_nodes);
     pose_recorder_->Close();
+    LOG(INFO) << "Map Build Success, All Map related data was saved on: "
+              << map_save_path_;
   }
   return true;
 }
@@ -538,7 +533,6 @@ void MapBuildNode::LaserCallBack(
                              common::kUtsEpochOffsetFromUnixEpochInSeconds) *
                                 10000000ll +
                             (laser->header.stamp.nanosec + 50) / 100);
-  LOG(INFO) << "delta time is:: " << common::ToSeconds(time - last_time_);
   last_time_ = time;
   projector_.projectLaser(*laser, cloud, 20.0);
 
@@ -557,7 +551,7 @@ void MapBuildNode::LaserCallBack(
   if (local_slam_->LatestPoseExtrapolatorTime() == common::Time::min() ||
       time < local_slam_->LatestPoseExtrapolatorTime()) {
     LOG(INFO) << "return cause by time"
-              << local_slam_->LatestPoseExtrapolatorTime();
+              << local_slam_->LatestPoseExtrapolatorTime() << "Imu no data";
     return;
   }
   sensor::PointCloud pc(time, points);

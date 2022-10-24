@@ -124,8 +124,9 @@ std::unique_ptr<transform::Rigid2d> LocalSlam::ScanMatch(
   if (param_.use_real_time_correlative_scan_matching) {
     const double score = real_time_matcher_->Match(
         pose_predicted, pc, *matching_submap->grid(), &initial_ceres_pose);
-    LOG(INFO) << "Real Time Correlative Scan Matching Got : " << score
-              << "initial ceres pose is: " << initial_ceres_pose.DebugString();
+    LOG_IF_EVERY_N(WARNING, score < 0.55, 10)
+        << "Real Time Correlative Scan Matching Got : " << score
+        << "initial ceres pose is: " << initial_ceres_pose.DebugString();
   }
 
   auto pose_observation = std::make_unique<transform::Rigid2d>();
@@ -133,7 +134,7 @@ std::unique_ptr<transform::Rigid2d> LocalSlam::ScanMatch(
   ceres_scan_matcher_->Match(pose_predicted.translation(), initial_ceres_pose,
                              pc, *matching_submap->grid(),
                              pose_observation.get(), &summary);
-  LOG(INFO)
+  LOG_EVERY_N(INFO, 10)
       << "residual translation is: "
       << (pose_observation->translation() - pose_predicted.translation()).norm()
       << " angle residual is: "
