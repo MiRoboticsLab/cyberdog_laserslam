@@ -38,7 +38,6 @@ void ConstraintBuilder::FindRelocLoopConstraint(
       param_.max_reloc_constraint_distance) {
     return;
   }
-  LOG(INFO) << "find a submap" << submap_id.submap_index;
   while (when_done_) {
     usleep(1000);
     // LOG(WARNING) << "Find Reloc Loop was called while WhenDone was schedule";
@@ -65,7 +64,6 @@ void ConstraintBuilder::AddLocalLoopConstraint(
     const transform::Rigid2d& initial_relative_pose) {
   if (initial_relative_pose.translation().norm() >
       param_.max_constraint_distance) {
-    LOG(INFO) << "far away";
     return;
   }
   if (!per_submap_sampler_

@@ -14,7 +14,6 @@
 
 from http.server import executable
 from ament_index_python.packages import get_package_share_directory
-from mi.cyberdog_bringup.manual import get_namespace
 
 from launch import LaunchDescription
 from launch_ros.actions import LifecycleNode

@@ -87,9 +87,6 @@ void OptimizationProblem2D::Solve(
   for (const auto& submap_id_data : submap_data_) {
     const bool frozen =
         frozen_trajectories.count(submap_id_data.id.trajectory_id) != 0;
-    LOG(INFO) << "submap pose is: "
-              << submap_data_.at(submap_id_data.id).global_pose.DebugString()
-              << " which include in: " << submap_id_data.id.trajectory_id;
     C_submaps.Insert(submap_id_data.id,
                      FromPose(submap_id_data.data.global_pose));
     problem.AddParameterBlock(C_submaps.at(submap_id_data.id).data(), 3);
@@ -150,8 +147,9 @@ void OptimizationProblem2D::Solve(
   for (const auto& C_submap_id_data : C_submaps) {
     submap_data_.at(C_submap_id_data.id).global_pose =
         ToPose(C_submap_id_data.data);
-    LOG(INFO) << "submap data is: " << C_submap_id_data.id.trajectory_id
-              << submap_data_.at(C_submap_id_data.id).global_pose.DebugString();
+    // LOG(INFO) << "submap data is: " << C_submap_id_data.id.trajectory_id
+    //           <<
+    //           submap_data_.at(C_submap_id_data.id).global_pose.DebugString();
   }
 
   for (const auto& C_node_id_data : C_nodes) {

@@ -53,7 +53,7 @@ localization_node:
      constraint_builder_param:
       min_score: 0.55
       reloc_min_score: 0.65
-      log_matches: true
+      log_matches: false
       loop_closure_rotation_weight: 1.e5
       loop_closure_translation_weight: 1.1e4
       max_constraint_distance: 2.
@@ -74,7 +74,7 @@ localization_node:
       huber_scale: 1e1
       max_num_iterations: 50
       num_threads: 7
-      report_full_summary: true
+      report_full_summary: false
     thread_num_pool: 4
     start_location_service_name: start_location
     stop_location_service_name: stop_location
