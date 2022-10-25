@@ -70,10 +70,7 @@ void ConstraintBuilder::AddLocalLoopConstraint(
            .emplace(std::piecewise_construct, std::forward_as_tuple(submap_id),
                     std::forward_as_tuple(param_.ratio))
            .first->second.Pulse()) {
-    LOG(INFO) << "no pulse";
     return;
-  } else {
-    LOG(INFO) << "pulse";
   }
   if (when_done_) {
     LOG(WARNING)
