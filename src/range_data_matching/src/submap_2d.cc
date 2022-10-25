@@ -90,12 +90,9 @@ std::vector<std::shared_ptr<const Submap2D>> ActiveSubmaps2D::InsertRangeData(
       submaps_.back()->num_range_data() == param_.num_range_data) {
     AddSubmap(range_data.origin.head<2>());
   }
-  LOG(INFO) << "add submap "
-            << " size is: " << submaps_.size();
   for (auto& submap : submaps_) {
     submap->InsertRangeData(range_data, range_data_inserter_.get());
   }
-  LOG(INFO) << "insert end";
   if (submaps_.front()->num_range_data() == 2 * param_.num_range_data) {
     submaps_.front()->Finish();
   }

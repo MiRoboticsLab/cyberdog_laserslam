@@ -47,7 +47,7 @@ NodeId BundleAdjustment::AddNode(
   // append node which update pose up to last optimized node
   const transform::Rigid3d optimized_pose(
       GetLocalToGlobalTransform(trajectory_id) * constant_data->local_pose);
-  LOG(INFO) << "newest pose is: " << optimized_pose.DebugString();
+  LOG_EVERY_N(INFO, 100) << "newest pose is: " << optimized_pose.DebugString();
   const NodeId node_id = AppendNode(constant_data, trajectory_id,
                                     insertion_submaps, optimized_pose);
   // if the front of submaps finished?
@@ -315,11 +315,12 @@ void BundleAdjustment::DrainWorkQueue() {
     }
     process_work_queue = work_item() == WorkItem::Result::kDoNotRunOptimization;
     if (process_work_queue) {
-      LOG(INFO) << "Still not trigger optimization, process task in work queue."
-                << " parameter nodes is: " << param_.optimize_every_n_nodes;
+      LOG_EVERY_N(INFO, 100)
+          << "Still not trigger optimization, process task in work queue."
+          << " parameter nodes is: " << param_.optimize_every_n_nodes;
     }
   }
-  LOG(INFO) << "Remaining work items in queue: " << work_queue_size;
+  LOG_EVERY_N(INFO, 50) << "Remaining work items in queue: " << work_queue_size;
   constraint_builder_.WhenDone([this](const ConstraintBuilder::Result& result) {
     HandleWorkQueue(result);
   });
@@ -342,8 +343,6 @@ void BundleAdjustment::HandleWorkQueue(
       }
     }
     auto submap_num = data_.submap_data.SizeOfTrajectoryOrZero(trajectory_id);
-    LOG(INFO) << "submap size is: " << submap_num
-              << "trajectory id is: " << trajectory_id;
     if (param_.max_submaps_maintain > 0 &&
         submap_num == param_.max_submaps_maintain) {
       // trim submap for pose graph if need
@@ -351,7 +350,7 @@ void BundleAdjustment::HandleWorkQueue(
       CHECK(param_.max_submaps_maintain >= 3)
           << "Please set 'max submaps maintain' greater equal than 3 to make "
              "sure the submap trimmed is 'insertion finished'";
-      LOG(INFO) << "trim submap when submap num is: " << submap_num;
+      LOG_EVERY_N(INFO, 50) << "trim submap when submap num is: " << submap_num;
       TrimSubmap(data_.submap_data.BeginOfTrajectory(trajectory_id)->id);
     }
     std::lock_guard<std::mutex> lk_node(num_nodes_since_loop_closure_mutex_);
@@ -382,9 +381,9 @@ transform::Rigid3d BundleAdjustment::ComputeLocalToGlobalTransform(
     return transform::Rigid3d::Identity();
   }
   const SubmapId last_optimized_submap_id = std::prev(end_it)->id;
-  LOG_EVERY_N(INFO, 10) << "global submap pose is: "
-                        << global_submap_poses.at(last_optimized_submap_id)
-                               .global_pose.DebugString();
+  LOG_EVERY_N(INFO, 100) << "global submap pose is: "
+                         << global_submap_poses.at(last_optimized_submap_id)
+                                .global_pose.DebugString();
   return transform::Embed3D(
              global_submap_poses.at(last_optimized_submap_id).global_pose) *
          data_.submap_data.at(last_optimized_submap_id)
@@ -504,7 +503,7 @@ WorkItem::Result BundleAdjustment::ComputeConstraintsForNode(
         transform::Project2D(constant_data->local_pose *
                              transform::Rigid3d::Rotation(
                                  constant_data->gravity_alignment.inverse()));
-    LOG_EVERY_N(INFO, 10)
+    LOG_EVERY_N(INFO, 50)
         << "global pose is: "
         << optimization_problem_->submap_data()
                .at(matching_id)
@@ -518,7 +517,7 @@ WorkItem::Result BundleAdjustment::ComputeConstraintsForNode(
         transform::Project2D(insertion_submaps.front()->local_pose())
             .inverse() *
         local_pose_2d;
-    LOG_EVERY_N(INFO, 10) << "global pose is: " << global_pose_2d.DebugString()
+    LOG_EVERY_N(INFO, 50) << "global pose is: " << global_pose_2d.DebugString()
                           << " local pose is: " << local_pose_2d.DebugString();
     optimization_problem_->AddTrajectoryNode(
         matching_id.trajectory_id,
@@ -578,7 +577,6 @@ WorkItem::Result BundleAdjustment::ComputeConstraintsForNode(
     std::lock_guard<std::mutex> lk(num_nodes_since_loop_closure_mutex_);
     ++num_nodes_since_last_loop_closure_;
   }
-  LOG(INFO) << "optimization nodes: " << num_nodes_since_last_loop_closure_;
   if (param_.optimize_every_n_nodes > 0 &&
       num_nodes_since_last_loop_closure_ > param_.optimize_every_n_nodes) {
     return WorkItem::Result::kRunOptimization;
@@ -603,14 +601,14 @@ void BundleAdjustment::ComputeConstraint(const NodeId& node_id,
   const transform::Rigid2d initial_relative_pose =
       optimization_problem_->submap_data().at(submap_id).global_pose.inverse() *
       optimization_problem_->node_data().at(node_id).global_pose_2d;
-  LOG_EVERY_N(INFO, 10) << "submap global pose is: "
-                        << optimization_problem_->submap_data()
-                               .at(submap_id)
-                               .global_pose.DebugString()
-                        << " node global pose is: "
-                        << optimization_problem_->node_data()
-                               .at(node_id)
-                               .global_pose_2d.DebugString();
+  LOG_EVERY_N(INFO, 100) << "submap global pose is: "
+                         << optimization_problem_->submap_data()
+                                .at(submap_id)
+                                .global_pose.DebugString()
+                         << " node global pose is: "
+                         << optimization_problem_->node_data()
+                                .at(node_id)
+                                .global_pose_2d.DebugString();
   constraint_builder_.AddLocalLoopConstraint(
       submap_id, submap, node_id, constant_data, initial_relative_pose);
 }

@@ -134,7 +134,7 @@ std::unique_ptr<transform::Rigid2d> LocalSlam::ScanMatch(
   ceres_scan_matcher_->Match(pose_predicted.translation(), initial_ceres_pose,
                              pc, *matching_submap->grid(),
                              pose_observation.get(), &summary);
-  LOG_EVERY_N(INFO, 10)
+  LOG_EVERY_N(INFO, 100)
       << "residual translation is: "
       << (pose_observation->translation() - pose_predicted.translation()).norm()
       << " angle residual is: "
