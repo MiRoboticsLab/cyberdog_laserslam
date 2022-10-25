@@ -83,11 +83,11 @@ Eigen::Vector3d PoseExtrapolator::ExtrapolateTranslation(common::Time time) {
   const TimedPose& newest_timed_pose = timed_pose_queue_.back();
   const double extrapolation_delta =
       common::ToSeconds(time - newest_timed_pose.time);
-  LOG(INFO) << "linear velocity from poses is: "
-            << linear_velocity_from_poses_.transpose()
-            << "linear velocity from odometry is: "
-            << linear_velocity_from_odometry_.transpose()
-            << "delta time is: " << extrapolation_delta;
+  LOG_EVERY_N(INFO, 10) << "linear velocity from poses is: "
+                        << linear_velocity_from_poses_.transpose()
+                        << "linear velocity from odometry is: "
+                        << linear_velocity_from_odometry_.transpose()
+                        << "delta time is: " << extrapolation_delta;
   if (odom_data_.size() < 2) {
     return extrapolation_delta * linear_velocity_from_poses_;
   }
@@ -140,7 +140,6 @@ void PoseExtrapolator::AddOdometryData(const OdomMeasurement& odom_data) {
   const OdomMeasurement odometry_newest_data = odom_data_.back();
   const double odometry_time_delta =
       common::ToSeconds(odometry_oldest_data.time - odometry_newest_data.time);
-  LOG(INFO) << "delta time is: " << odometry_time_delta;
   const transform::Rigid3d delta_pose =
       odometry_newest_data.pose.inverse() * odometry_oldest_data.pose;
   angular_velocity_from_odometry_ =
@@ -155,8 +154,8 @@ void PoseExtrapolator::AddOdometryData(const OdomMeasurement& odom_data) {
                           odometry_imu_tracker_.get());
   linear_velocity_from_odometry_ = orientation_in_newest_odom_frame *
                                    linear_velocity_within_newest_odom_frame;
-  LOG(INFO) << "linear velocity is: "
-            << linear_velocity_from_odometry_.transpose();
+  LOG_EVERY_N(INFO, 10) << "linear velocity is: "
+                        << linear_velocity_from_odometry_.transpose();
 }
 
 void PoseExtrapolator::UpdateVelocityFromPoses() {
@@ -186,7 +185,8 @@ void PoseExtrapolator::UpdateVelocityFromPoses() {
 }
 
 void PoseExtrapolator::AddPose(const transform::TimedRigid3d& pose) {
-  LOG(INFO) << "add pose is: " << pose.pose;
+  LOG_IF(INFO, pose.pose.translation().norm() > 100)
+      << "add pose is: " << pose.pose;
   {
     std::lock_guard<std::mutex> lk(last_pose_lk_);
     last_extrapolated_pose_ = pose;
@@ -215,7 +215,9 @@ void PoseExtrapolator::AddPose(const transform::TimedRigid3d& pose) {
 
 transform::Rigid3d PoseExtrapolator::ExtrapolatePose(common::Time time) {
   const TimedPose& newest_timed_pose = timed_pose_queue_.back();
-  CHECK_GE(time, newest_timed_pose.time) << "time problem";
+  CHECK_GE(time, newest_timed_pose.time)
+      << "time problem" << time.time_since_epoch().count() << " , "
+      << newest_timed_pose.time.time_since_epoch().count();
   if (cached_extrapolated_pose_.time != time) {
     const Eigen::Vector3d translation =
         ExtrapolateTranslation(time) + newest_timed_pose.pose.translation();

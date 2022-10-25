@@ -48,7 +48,7 @@ map_builder:
     pose_graph_param:
       constraint_builder_param:
         min_score: 0.55
-        log_matches: true
+        log_matches: false
         loop_closure_rotation_weight: 1.e5
         loop_closure_translation_weight: 1.1e4
         max_constraint_distance: 5.0
@@ -68,7 +68,7 @@ map_builder:
         huber_scale: 1e1
         max_num_iterations: 50
         num_threads: 7
-        report_full_summary: true
+        report_full_summary: false
       optimize_every_n_nodes: 20
       max_num_final_iterations: 200
       matcher_rotation_weight: 5e2

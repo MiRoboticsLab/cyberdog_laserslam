@@ -382,9 +382,9 @@ transform::Rigid3d BundleAdjustment::ComputeLocalToGlobalTransform(
     return transform::Rigid3d::Identity();
   }
   const SubmapId last_optimized_submap_id = std::prev(end_it)->id;
-  LOG(INFO) << "global submap pose is: "
-            << global_submap_poses.at(last_optimized_submap_id)
-                   .global_pose.DebugString();
+  LOG_EVERY_N(INFO, 10) << "global submap pose is: "
+                        << global_submap_poses.at(last_optimized_submap_id)
+                               .global_pose.DebugString();
   return transform::Embed3D(
              global_submap_poses.at(last_optimized_submap_id).global_pose) *
          data_.submap_data.at(last_optimized_submap_id)
@@ -504,21 +504,22 @@ WorkItem::Result BundleAdjustment::ComputeConstraintsForNode(
         transform::Project2D(constant_data->local_pose *
                              transform::Rigid3d::Rotation(
                                  constant_data->gravity_alignment.inverse()));
-    LOG(INFO) << "global pose is: "
-              << optimization_problem_->submap_data()
-                     .at(matching_id)
-                     .global_pose.DebugString()
-              << " id of submap is: " << matching_id.submap_index
-              << "gravity alignment is: "
-              << constant_data->gravity_alignment.toRotationMatrix();
+    LOG_EVERY_N(INFO, 10)
+        << "global pose is: "
+        << optimization_problem_->submap_data()
+               .at(matching_id)
+               .global_pose.DebugString()
+        << " id of submap is: " << matching_id.submap_index
+        << "gravity alignment is: "
+        << constant_data->gravity_alignment.toRotationMatrix();
     // global pose 2d is calculate pose of node from submap local pose optimized
     const transform::Rigid2d global_pose_2d =
         optimization_problem_->submap_data().at(matching_id).global_pose *
         transform::Project2D(insertion_submaps.front()->local_pose())
             .inverse() *
         local_pose_2d;
-    LOG(INFO) << "global pose is: " << global_pose_2d.DebugString()
-              << " local pose is: " << local_pose_2d.DebugString();
+    LOG_EVERY_N(INFO, 10) << "global pose is: " << global_pose_2d.DebugString()
+                          << " local pose is: " << local_pose_2d.DebugString();
     optimization_problem_->AddTrajectoryNode(
         matching_id.trajectory_id,
         NodeSpec2D{constant_data->time, local_pose_2d, global_pose_2d,
@@ -602,14 +603,14 @@ void BundleAdjustment::ComputeConstraint(const NodeId& node_id,
   const transform::Rigid2d initial_relative_pose =
       optimization_problem_->submap_data().at(submap_id).global_pose.inverse() *
       optimization_problem_->node_data().at(node_id).global_pose_2d;
-  LOG(INFO) << "submap global pose is: "
-            << optimization_problem_->submap_data()
-                   .at(submap_id)
-                   .global_pose.DebugString()
-            << " node global pose is: "
-            << optimization_problem_->node_data()
-                   .at(node_id)
-                   .global_pose_2d.DebugString();
+  LOG_EVERY_N(INFO, 10) << "submap global pose is: "
+                        << optimization_problem_->submap_data()
+                               .at(submap_id)
+                               .global_pose.DebugString()
+                        << " node global pose is: "
+                        << optimization_problem_->node_data()
+                               .at(node_id)
+                               .global_pose_2d.DebugString();
   constraint_builder_.AddLocalLoopConstraint(
       submap_id, submap, node_id, constant_data, initial_relative_pose);
 }
