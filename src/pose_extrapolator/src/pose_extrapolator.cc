@@ -154,8 +154,8 @@ void PoseExtrapolator::AddOdometryData(const OdomMeasurement& odom_data) {
                           odometry_imu_tracker_.get());
   linear_velocity_from_odometry_ = orientation_in_newest_odom_frame *
                                    linear_velocity_within_newest_odom_frame;
-  LOG_EVERY_N(INFO, 10) << "linear velocity is: "
-                        << linear_velocity_from_odometry_.transpose();
+  LOG_EVERY_N(INFO, 100) << "linear velocity is: "
+                         << linear_velocity_from_odometry_.transpose();
 }
 
 void PoseExtrapolator::UpdateVelocityFromPoses() {
