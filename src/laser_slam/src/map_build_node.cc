@@ -286,6 +286,7 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
   std::string imu_topic("");
   this->declare_parameter("imu_topic", imu_topic);
   this->get_parameter("imu_topic", imu_topic);
+  imu_topic = this->get_namespace() + imu_topic;
   LOG(INFO) << imu_topic;
   imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
       imu_topic, rclcpp::SensorDataQoS(),
@@ -294,6 +295,7 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
   std::string odometry_topic("");
   this->declare_parameter("odometry_topic", odometry_topic);
   this->get_parameter("odometry_topic", odometry_topic);
+  odometry_topic = this->get_namespace() + odometry_topic;
   LOG(INFO) << odometry_topic;
   odom_subscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
       odometry_topic, rclcpp::SensorDataQoS(),
@@ -306,6 +308,8 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
       laser_topic, rclcpp::SensorDataQoS(),
       std::bind(&MapBuildNode::LaserCallBack, this, std::placeholders::_1),
       sub_laser_opt);
+
+  laser_topic = this->get_namespace() + laser_topic;
   LOG(INFO) << laser_topic;
 
   // Extrinsic of 'imu and odom' and 'laser to odom'

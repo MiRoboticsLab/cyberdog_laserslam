@@ -298,6 +298,7 @@ nav2_util::CallbackReturn LocalizationNode::on_configure(
   std::string imu_topic("");
   this->declare_parameter("imu_topic", imu_topic);
   this->get_parameter("imu_topic", imu_topic);
+  imu_topic = this->get_namespace() + imu_topic;
   imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
       imu_topic, rclcpp::SensorDataQoS(),
       std::bind(&LocalizationNode::ImuCallBack, this, std::placeholders::_1),
@@ -306,6 +307,7 @@ nav2_util::CallbackReturn LocalizationNode::on_configure(
   std::string odometry_topic("");
   this->declare_parameter("odometry_topic", odometry_topic);
   this->get_parameter("odometry_topic", odometry_topic);
+  odometry_topic = this->get_namespace() + odometry_topic;
   odom_subscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
       odometry_topic, rclcpp::SensorDataQoS(),
       std::bind(&LocalizationNode::OdomCallback, this, std::placeholders::_1),
@@ -313,6 +315,7 @@ nav2_util::CallbackReturn LocalizationNode::on_configure(
   std::string laser_topic("");
   this->declare_parameter("laser_scan_topic", laser_topic);
   this->get_parameter("laser_scan_topic", laser_topic);
+  laser_topic = this->get_namespace() + laser_topic;
   laser_subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
       laser_topic, rclcpp::SensorDataQoS(),
       std::bind(&LocalizationNode::LaserCallBack, this, std::placeholders::_1),
