@@ -304,12 +304,12 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
   std::string laser_topic("");
   this->declare_parameter("laser_scan_topic", laser_topic);
   this->get_parameter("laser_scan_topic", laser_topic);
+  laser_topic = this->get_namespace() + laser_topic;
   laser_subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
       laser_topic, rclcpp::SensorDataQoS(),
       std::bind(&MapBuildNode::LaserCallBack, this, std::placeholders::_1),
       sub_laser_opt);
 
-  laser_topic = this->get_namespace() + laser_topic;
   LOG(INFO) << laser_topic;
 
   // Extrinsic of 'imu and odom' and 'laser to odom'
