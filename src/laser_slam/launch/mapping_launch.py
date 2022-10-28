@@ -29,7 +29,7 @@ import os
 
 def generate_launch_description():
     share_dir = get_package_share_directory('laser_slam')
-    parameter_file = LaunchConfiguration('params_file')
+    mapping_parameter_file = LaunchConfiguration('mapping_params_file')
     namespace = LaunchConfiguration('namespace',default='')
     imu_topic = LaunchConfiguration('imu_topic')
     param_substitutions = {
@@ -37,8 +37,8 @@ def generate_launch_description():
    }
 
 
-    configured_params = RewrittenYaml(
-            source_file=parameter_file,
+    mapping_configured_params = RewrittenYaml(
+            source_file=mapping_parameter_file,
             root_key=namespace,
             param_rewrites=param_substitutions,
             convert_types=True)
@@ -48,7 +48,7 @@ def generate_launch_description():
             description='Use simulation (Gazebo) clock if true')
 
 
-    mapping_params_declare = DeclareLaunchArgument('params_file',
+    mapping_params_declare = DeclareLaunchArgument('mapping_params_file',
                                            default_value=os.path.join(
                                                share_dir, 'param', 'mapping_node.yaml'),
                                            description='FPath to the ROS2 parameters file to use.')
@@ -60,7 +60,7 @@ def generate_launch_description():
                                 emulate_tty=True,
                                 namespace=namespace,
                                 #parameters=[parameter_file]
-                                parameters=[configured_params],
+                                parameters=[mapping_configured_params],
                                 #namespace=get_namespace()
                                 )
 
