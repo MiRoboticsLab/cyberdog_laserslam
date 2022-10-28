@@ -29,20 +29,20 @@ import os
 
 def generate_launch_description():
     share_dir = get_package_share_directory('laser_slam')
-    parameter_file = LaunchConfiguration('params_file')
+    localization_parameter_file = LaunchConfiguration('localization_params_file')
     namespace = LaunchConfiguration('namespace',default='')
     imu_topic = LaunchConfiguration('imu_topic')
     param_substitutions = {
         'imu_topic': imu_topic
     }
     
-    configured_params = RewrittenYaml(
-            source_file=parameter_file,
+    localization_configured_params = RewrittenYaml(
+            source_file=localization_parameter_file,
             root_key=namespace,
             param_rewrites=param_substitutions,
             convert_types=True)
 
-    localization_params_declare = DeclareLaunchArgument('params_file',
+    localization_params_declare = DeclareLaunchArgument('localization_params_file',
                                            default_value=os.path.join(
                                                share_dir, 'param', 'localization.yaml'),
                                            description='FPath to the ROS2 parameters file to use.')
@@ -57,7 +57,7 @@ def generate_launch_description():
                                 output='screen',
                                 emulate_tty=True,
                                 #prefix=['xterm -e gdb  --args'],
-                                parameters=[configured_params],
+                                parameters=[localization_configured_params],
                                 namespace=namespace,
                                 )
 
