@@ -42,9 +42,13 @@ def generate_launch_description():
             root_key=namespace,
             param_rewrites=param_substitutions,
             convert_types=True)
+    
+    rew = DeclareLaunchArgument(
+            'imu_topic', default_value='/camera/imu',
+            description='Use simulation (Gazebo) clock if true')
 
 
-    params_declare = DeclareLaunchArgument('params_file',
+    mapping_params_declare = DeclareLaunchArgument('params_file',
                                            default_value=os.path.join(
                                                share_dir, 'param', 'mapping_node.yaml'),
                                            description='FPath to the ROS2 parameters file to use.')
@@ -61,9 +65,7 @@ def generate_launch_description():
                                 )
 
     return LaunchDescription([
-        DeclareLaunchArgument(
-            'imu_topic', default_value='/camera/imu',
-            description='Use simulation (Gazebo) clock if true'),
-        params_declare,
+        rew,
+        mapping_params_declare,
         driver_node,
     ])
