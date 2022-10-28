@@ -42,10 +42,14 @@ def generate_launch_description():
             param_rewrites=param_substitutions,
             convert_types=True)
 
-    params_declare = DeclareLaunchArgument('params_file',
+    localization_params_declare = DeclareLaunchArgument('params_file',
                                            default_value=os.path.join(
                                                share_dir, 'param', 'localization.yaml'),
                                            description='FPath to the ROS2 parameters file to use.')
+
+    rew_loc = DeclareLaunchArgument(
+            'imu_topic', default_value='/camera/imu',
+            description='Use simulation (Gazebo) clock if true')
 
     driver_node = LifecycleNode(package='laser_slam',
                                 executable='localization',
@@ -58,9 +62,7 @@ def generate_launch_description():
                                 )
 
     return LaunchDescription([
-        DeclareLaunchArgument(
-            'imu_topic', default_value='/camera/imu',
-            description='Use simulation (Gazebo) clock if true'),
-        params_declare,
+        rew_loc,
+        localization_params_declare,
         driver_node,
     ])
