@@ -135,7 +135,7 @@ void Localization::AddRangeData(const sensor::PointCloud& timed_point_cloud) {
         if (matching_result->insertion_result != nullptr) {
           const auto submaps =
               matching_result->insertion_result->insertion_submaps;
-          pose_graph_->AddFirstRelocNode(trajectory_id_, submaps);
+          auto id = pose_graph_->AddFirstRelocNode(trajectory_id_, submaps);
         }
       }
       state_ = State::LOCATION;
@@ -170,6 +170,9 @@ void Localization::AddRangeData(const sensor::PointCloud& timed_point_cloud) {
       } else {
         pose_to_cb = matching_result->local_pose;
         range_data_callback = matching_result->range_data_in_local;
+        auto global_pose =
+            pose_graph_->LocalToGlobalTransform(trajectory_id_) * pose_to_cb;
+        pose_to_cb = global_pose;
       }
       range_data_callback.returns.time() = matching_result->time;
       if (pose_pc_callback_) {

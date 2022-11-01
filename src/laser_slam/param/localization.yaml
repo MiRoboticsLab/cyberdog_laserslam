@@ -11,9 +11,9 @@ localization_node:
     use_filter: true
     gravity_constant: 10.0
     pose_duration_time: 0.01
-    max_time_seconds: 5.0
-    max_distance_meters: 0.2
-    max_angle_radians: 0.0175
+    max_time_seconds: 10.0
+    max_distance_meters: 0.5
+    max_angle_radians: 0.0525
     min_range: 0.2
     max_range: 15.0
     missing_data_ray_length: 5.0
@@ -58,7 +58,7 @@ localization_node:
       loop_closure_translation_weight: 1.1e4
       max_constraint_distance: 2.
       max_reloc_constraint_distance: 100.
-      ratio: 0.8
+      ratio: 0.2
       ceres_params:
        max_num_iterations: 10
        num_threads: 1

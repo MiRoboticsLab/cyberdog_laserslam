@@ -82,6 +82,10 @@ class BundleAdjustment {
     submap_callback_ = callback;
   }
 
+  transform::Rigid3d LocalToGlobalTransform(int trajectory_id) {
+    return GetLocalToGlobalTransform(trajectory_id);
+  }
+
  private:
   void RelocConstraintsWorkHandle(const ConstraintBuilder::Result& result);
 
