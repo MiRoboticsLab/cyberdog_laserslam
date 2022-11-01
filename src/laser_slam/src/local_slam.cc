@@ -103,7 +103,7 @@ std::unique_ptr<MatchingResult> LocalSlam::AddRangeData(
     // transform range data to origin(0,0),but orientation is transformed to
     // local frame already
     return AddAccumulatedRangeData(
-        timed_point_cloud.time(),
+        timed_point_cloud.time(), pose,
         TransformToGravityAlignedFrameAndFilter(
             gravity_alignment.cast<float>() * pose.inverse().cast<float>(),
             accumulated_data_),
@@ -145,7 +145,8 @@ std::unique_ptr<transform::Rigid2d> LocalSlam::ScanMatch(
 }
 
 std::unique_ptr<MatchingResult> LocalSlam::AddAccumulatedRangeData(
-    common::Time time, const sensor::RangeData& range_data,
+    common::Time time, const transform::Rigid3d& pose,
+    const sensor::RangeData& range_data,
     const transform::Rigid3d& gravity_alignment) {
   // check range data returns is empty or not, if empty, drop it and return
   // nullptr
@@ -153,8 +154,7 @@ std::unique_ptr<MatchingResult> LocalSlam::AddAccumulatedRangeData(
     LOG(WARNING) << "Dropped empty horizontal range data";
     return nullptr;
   }
-  const transform::Rigid3d non_gravity_aligned_pose =
-      pose_extrapolator_->ExtrapolatePose(time);
+  const transform::Rigid3d non_gravity_aligned_pose = pose;
   const transform::Rigid2d pose_prediction = transform::Project2D(
       non_gravity_aligned_pose * gravity_alignment.inverse());
 

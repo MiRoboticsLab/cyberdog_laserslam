@@ -94,7 +94,8 @@ class LocalSlam {
 
  private:
   std::unique_ptr<MatchingResult> AddAccumulatedRangeData(
-      common::Time time, const sensor::RangeData& range_data,
+      common::Time time, const transform::Rigid3d& pose,
+      const sensor::RangeData& range_data,
       const transform::Rigid3d& gravity_alignment);
 
   std::unique_ptr<InsertionResult> InsertIntoSubmap(
