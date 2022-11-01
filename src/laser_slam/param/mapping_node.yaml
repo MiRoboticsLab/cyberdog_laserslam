@@ -51,6 +51,7 @@ map_builder:
         log_matches: false
         loop_closure_rotation_weight: 1.e5
         loop_closure_translation_weight: 1.1e4
+        max_submaps_maintain: 0
         max_constraint_distance: 5.0
         ratio: 0.3
         ceres_params:

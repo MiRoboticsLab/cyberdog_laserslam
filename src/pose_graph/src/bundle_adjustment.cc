@@ -342,17 +342,29 @@ void BundleAdjustment::HandleWorkQueue(
         trajectory_id = id_state.first;
       }
     }
-    auto submap_num = data_.submap_data.SizeOfTrajectoryOrZero(trajectory_id);
-    if (param_.max_submaps_maintain > 0 &&
-        submap_num == param_.max_submaps_maintain) {
-      // trim submap for pose graph if need
-      // Make Sure 'max submaps maintain' greater than 3
-      CHECK(param_.max_submaps_maintain >= 3)
-          << "Please set 'max submaps maintain' greater equal than 3 to make "
-             "sure the submap trimmed is 'insertion finished'";
-      LOG_EVERY_N(INFO, 50) << "trim submap when submap num is: " << submap_num;
-      TrimSubmap(data_.submap_data.BeginOfTrajectory(trajectory_id)->id);
+
+    if (param_.max_submaps_maintain > 0) {
+      auto submap_num = data_.submap_data.SizeOfTrajectoryOrZero(trajectory_id);
+      int i = param_.max_submaps_maintain;
+
+      while (submap_num > param_.max_submaps_maintain) {
+        CHECK(param_.max_submaps_maintain >= 3)
+            << "Please set 'max submaps maintain' greater equal than 3 to make "
+               "sure the submap trimmed is 'insertion finished'";
+        LOG(INFO) << "trim submap when submap num is: " << submap_num;
+        std::string state =
+            data_.submap_data.BeginOfTrajectory(trajectory_id)->data.state ==
+                    SubmapState::kFinished
+                ? "finished"
+                : "unfinished";
+        LOG(INFO) << "state of submap is: " << state;
+        LOG(INFO) << "submap id is: "
+                  << data_.submap_data.EndOfTrajectory(trajectory_id - 1)->id;
+        TrimSubmap(data_.submap_data.EndOfTrajectory(trajectory_id - 1)->id);
+        --submap_num;
+      }
     }
+
     std::lock_guard<std::mutex> lk_node(num_nodes_since_loop_closure_mutex_);
     num_nodes_since_last_loop_closure_ = 0;
   }
@@ -564,11 +576,13 @@ WorkItem::Result BundleAdjustment::ComputeConstraintsForNode(
   }
   if (newly_finished_submap) {
     const SubmapId newly_finished_submap_id = submap_ids.front();
+
     // new finished map, should add constraints for old nodes
     for (const auto& node_id_data : optimization_problem_->node_data()) {
-      const NodeId& node_id = node_id_data.id;
-      if (newly_finished_submap_node_ids.count(node_id) == 0) {
-        ComputeConstraint(node_id, newly_finished_submap_id);
+      const NodeId& node_id_b = node_id_data.id;
+      if (newly_finished_submap_node_ids.count(node_id_b) == 0 &&
+          node_id.trajectory_id == node_id_b.trajectory_id) {
+        ComputeConstraint(node_id_b, newly_finished_submap_id);
       }
     }
   }
