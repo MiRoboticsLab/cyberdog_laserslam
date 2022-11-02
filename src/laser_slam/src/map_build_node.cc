@@ -16,6 +16,7 @@ MapBuildNode::MapBuildNode(int thread_num)
     : nav2_util::LifecycleNode("map_builder", ""),
       is_on_active_status_(false),
       map_publish_period_sec_(0.0),
+      last_laser_time_(0),
       frame_id_(""),
       local_slam_(nullptr),
       thread_pool_(thread_num),
@@ -537,6 +538,11 @@ void MapBuildNode::LaserCallBack(
                              common::kUtsEpochOffsetFromUnixEpochInSeconds) *
                                 10000000ll +
                             (laser->header.stamp.nanosec + 50) / 100);
+  if (last_laser_time_ > common::ToUniversal(time)) {
+    LOG(ERROR) << "Time Back!!!!!!!!!!!!";
+    return;
+  }
+  last_laser_time_ = common::ToUniversal(time);
   last_time_ = time;
   projector_.projectLaser(*laser, cloud, 20.0);
 
