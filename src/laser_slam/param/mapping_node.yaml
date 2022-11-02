@@ -10,14 +10,14 @@ map_builder:
     use_real_time_correlative_scan_matching: true
     num_accumulated: 1
     use_filter: false
-    gravity_constant: 10.0
+    gravity_constant: 9.8
     pose_duration_time: 0.01
     max_time_seconds: 5.0
     max_distance_meters: 0.2
     max_angle_radians: 0.0175
     min_range: 0.2
     max_range: 15.0
-    missing_data_ray_length: 5.0
+    missing_data_ray_length: 8.0
     voxel_filter_size: 0.025
     min_num_points: 200.0
     max_length: 0.5
@@ -70,7 +70,7 @@ map_builder:
         max_num_iterations: 50
         num_threads: 7
         report_full_summary: false
-      optimize_every_n_nodes: 20
+      optimize_every_n_nodes: 80
       max_num_final_iterations: 200
       matcher_rotation_weight: 5e2
       matcher_translation_weight: 1.6e3
