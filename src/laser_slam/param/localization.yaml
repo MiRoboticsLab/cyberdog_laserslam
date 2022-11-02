@@ -45,7 +45,7 @@ localization_node:
     imu_to_odom: [-1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0]
     laser_to_odom: [0.1793, 0.0, 0.0]
     pose_graph_param:
-     optimize_every_n_nodes: 90
+     optimize_every_n_nodes: 40
      max_num_final_iterations: 200
      matcher_rotation_weight: 5e2
      matcher_translation_weight: 1.6e3
@@ -58,7 +58,7 @@ localization_node:
       loop_closure_translation_weight: 1.1e4
       max_constraint_distance: 2.
       max_reloc_constraint_distance: 100.
-      ratio: 0.2
+      ratio: 0.15
       ceres_params:
        max_num_iterations: 10
        num_threads: 1
