@@ -84,6 +84,7 @@ class LocalizationNode : public nav2_util::LifecycleNode {
   bool is_on_active_status_ = false;
   int reloc_id_;
   std::mutex job_mutex_;
+  int64 last_laser_time_;
   LocalizationParam localization_param_;
 
   // ros

@@ -15,6 +15,7 @@ namespace laser_slam {
 LocalizationNode::LocalizationNode()
     : nav2_util::LifecycleNode("localization", ""),
       reloc_id_(0),
+      last_laser_time_(0),
       reloc_client_(nullptr),
       localization_(nullptr),
       reloc_thread_(nullptr) {}
@@ -456,6 +457,12 @@ void LocalizationNode::LaserCallBack(
                              common::kUtsEpochOffsetFromUnixEpochInSeconds) *
                                 10000000ll +
                             (laser->header.stamp.nanosec + 50) / 100);
+  if (last_laser_time_ > common::ToUniversal(time)) {
+    LOG(ERROR) << "time back!!!!!!!!!!";
+    return;
+  }
+  last_laser_time_ = common::ToUniversal(time);
+  LOG(INFO) << "laser time stamp is: " << common::ToUniversal(time);
   projector_.projectLaser(*laser, cloud, 20.0);
   pcl::PointCloud<pcl::PointXYZ> raw_cloud;
   pcl::fromROSMsg(cloud, raw_cloud);
