@@ -142,6 +142,7 @@ bool BundleAdjustment::RecoverPoseGraphFromLast(
         transform::Project2D(submap.data.pose);
     data_.submap_data.Insert(submap.id, InternalSubmapData());
     data_.submap_data.at(submap.id).submap = submap.data.submap;
+    data_.submap_data.at(submap.id).state = SubmapState::kFinished;
     data_.global_submap_poses_2d.Insert(submap.id,
                                         SubmapSpec2D{global_submap_pose_2d});
     optimization_problem_->InsertSubmap(submap.id, global_submap_pose_2d);
