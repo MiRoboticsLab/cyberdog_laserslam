@@ -124,6 +124,7 @@ std::unique_ptr<transform::Rigid2d> LocalSlam::ScanMatch(
   if (param_.use_real_time_correlative_scan_matching) {
     const double score = real_time_matcher_->Match(
         pose_predicted, pc, *matching_submap->grid(), &initial_ceres_pose);
+    LOG(INFO) << "real time correlative matching score is: " << score;
     LOG_IF_EVERY_N(WARNING, score < 0.55, 10)
         << "Real Time Correlative Scan Matching Got : " << score
         << "initial ceres pose is: " << initial_ceres_pose.DebugString();

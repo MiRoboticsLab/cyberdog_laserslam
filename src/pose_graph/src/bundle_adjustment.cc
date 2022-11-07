@@ -142,6 +142,7 @@ bool BundleAdjustment::RecoverPoseGraphFromLast(
         transform::Project2D(submap.data.pose);
     data_.submap_data.Insert(submap.id, InternalSubmapData());
     data_.submap_data.at(submap.id).submap = submap.data.submap;
+    data_.submap_data.at(submap.id).state = SubmapState::kFinished;
     data_.global_submap_poses_2d.Insert(submap.id,
                                         SubmapSpec2D{global_submap_pose_2d});
     optimization_problem_->InsertSubmap(submap.id, global_submap_pose_2d);
@@ -557,6 +558,7 @@ WorkItem::Result BundleAdjustment::ComputeConstraintsForNode(
         finished_submap_ids.emplace_back(submap_id_data.id);
       }
     }
+
     if (newly_finished_submap) {
       const SubmapId newly_finished_submap_id = submap_ids.front();
       InternalSubmapData& finished_submap_data =
@@ -564,10 +566,6 @@ WorkItem::Result BundleAdjustment::ComputeConstraintsForNode(
       CHECK(finished_submap_data.state == SubmapState::kNoConstraintSearch);
       finished_submap_data.state = SubmapState::kFinished;
       newly_finished_submap_node_ids = finished_submap_data.node_ids;
-      if (submap_callback_) {
-        submap_callback_(newly_finished_submap_id,
-                         data_.submap_data.at(newly_finished_submap_id).submap);
-      }
     }
   }
   // compute constraint for each node and finished submap
