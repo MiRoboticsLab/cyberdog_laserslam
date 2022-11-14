@@ -16,6 +16,7 @@ SubmapPointsBatch::SubmapPointsBatch(double resolution, int init_width,
                                      int init_height)
     : resolution_(resolution),
       quit_thread_(false),
+      submap_count_(0),
       origin_(DBL_MAX, DBL_MAX),
       right_up_corner_(-DBL_MAX, -DBL_MAX),
       thread_(nullptr) {
@@ -30,9 +31,6 @@ SubmapPointsBatch::SubmapPointsBatch(double resolution, int init_width,
   final_map_.info.origin.orientation.y = 0.0;
   final_map_.info.origin.orientation.z = 0.0;
   final_map_.data.resize(init_height * init_width);
-  for (int i = 0; i < init_height * init_width; ++i) {
-    final_map_.data[i] = -1;
-  }
 }
 SubmapPointsBatch::~SubmapPointsBatch() {}
 
@@ -63,6 +61,13 @@ void SubmapPointsBatch::AddSubmap(
   tasks_condvar_.notify_all();
 }
 
+void SubmapPointsBatch::AddRangeData(const mapping::NodeId& id,
+                                     const sensor::RangeData& range_data) {
+  std::unique_lock<std::mutex> lk(job_mx_);
+  task_queue_.push(Task(id, range_data));
+  tasks_condvar_.notify_all();
+}
+
 void SubmapPointsBatch::Flush(
     const mapping::MapById<mapping::SubmapId,
                            pose_graph::optimization::SubmapSpec2D>&
@@ -70,6 +75,67 @@ void SubmapPointsBatch::Flush(
   std::unique_lock<std::mutex> lk(job_mx_);
   task_queue_.push(Task(pose_graph_submap));
   tasks_condvar_.notify_all();
+}
+
+void SubmapPointsBatch::Update(const sensor::RangeData& range_data) {
+  if (range_data.returns.empty()) return;
+  int width, height, offset_x, offset_y;
+  offset_x = 0;
+  offset_y = 0;
+  auto origin_bk = origin_;
+  auto data_bk = final_map_.data;
+  auto right_up = right_up_corner_;
+  int old_width = final_map_.info.width;
+  int old_height = final_map_.info.height;
+  for (size_t i = 0; i < range_data.returns.size(); ++i) {
+    double x, y;
+    x = range_data.returns[i].position.x();
+    y = range_data.returns[i].position.y();
+    if (x < origin_.x()) origin_.x() = x;
+    if (y < origin_.y()) origin_.y() = y;
+    if (x > right_up_corner_.x()) right_up_corner_.x() = x;
+    if (y > right_up_corner_.y()) right_up_corner_.y() = y;
+  }
+  width = std::ceil((right_up_corner_.x() - origin_.x()) / resolution_);
+  height = std::ceil((right_up_corner_.y() - origin_.y()) / resolution_);
+  Eigen::Vector2d offset = origin_bk - origin_;
+
+  offset_x = std::ceil(offset.y() / resolution_);
+
+  offset_y = std::ceil(offset.x() / resolution_);
+  if (offset_x < 0) offset_x = 0;
+  if (offset_y < 0) offset_y = 0;
+
+  final_map_.data.clear();
+  final_map_.data.resize(width * height);
+  for (int k = 0; k < width * height; ++k) {
+    final_map_.data[k] = 0;
+  }
+  final_map_.info.height = height;
+  final_map_.info.width = width;
+  final_map_.info.origin.position.x = origin_.x();
+  final_map_.info.origin.position.y = origin_.y();
+  if (not first_update_) {
+    LOG(INFO) << "offset is: " << offset_x << " , " << offset_y;
+    for (int id_x = 0; id_x < old_height; ++id_x) {
+      for (int id_y = 0; id_y < old_width; ++id_y) {
+        int new_id_x = id_x + offset_x;
+        int new_id_y = id_y + offset_y;
+        final_map_.data[new_id_x * width + new_id_y] =
+            data_bk[id_x * old_width + id_y];
+      }
+    }
+  }
+  for (auto pts : range_data.returns) {
+    int index_x = std::ceil((pts.position.y() - origin_.y()) / resolution_);
+    int index_y = std::ceil((pts.position.x() - origin_.x()) / resolution_);
+    // happen sometimes
+    if (index_x < 0) index_x = 0;
+    if (index_y < 0) index_y = 0;
+    final_map_.data[index_x * width + index_y] = 100;
+  }
+  first_update_ = false;
+  is_grid_ = true;
 }
 
 void SubmapPointsBatch::UpdateMap(
@@ -150,14 +216,9 @@ void SubmapPointsBatch::MapTaskLoop() {
     }
 
     if (task.type == Task::ADD_SUBMAP) {
-      // Add submap and update final_map_ and display_map_
-      auto ros_map = task.submap->grid()->ToRosOccupancyMsg(
-          resolution_, "", rclcpp::Time::max(), false, "");
-      id_rosmap_.Insert(task.id, *ros_map);
-      UpdateMap(*ros_map);
       {
-        std::unique_lock<std::mutex> lk(display_map_mx_);
-        map_display_ = CropGrid();
+        std::lock_guard<std::mutex> lk(display_map_mx_);
+        Update(task.range_data);
       }
     } else if (task.type == Task::FLUSH) {
       // flush final map and display map with new pose

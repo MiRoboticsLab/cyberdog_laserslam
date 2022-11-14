@@ -169,9 +169,11 @@ void Localization::AddRangeData(const sensor::PointCloud& timed_point_cloud) {
 
       } else {
         pose_to_cb = matching_result->local_pose;
-        range_data_callback = matching_result->range_data_in_local;
         auto global_pose =
             pose_graph_->LocalToGlobalTransform(trajectory_id_) * pose_to_cb;
+        range_data_callback = sensor::TransformRangeData(
+            matching_result->range_data_in_local,
+            pose_graph_->LocalToGlobalTransform(trajectory_id_).cast<float>());
         pose_to_cb = global_pose;
       }
       range_data_callback.returns.time() = matching_result->time;

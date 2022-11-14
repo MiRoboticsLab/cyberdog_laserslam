@@ -30,15 +30,20 @@ struct Task {
   enum Type { ADD_SUBMAP, FLUSH, EXTEND_MAP } type;
   mapping::SubmapId id;
   std::shared_ptr<const mapping::Submap> submap;
+  sensor::RangeData range_data;
+  mapping::NodeId node_id;
   mapping::MapById<mapping::SubmapId, pose_graph::optimization::SubmapSpec2D>
       flushed_pose;
-  Task() : id{0, 0} {}
+  Task() : id{0, 0}, node_id{0, 0} {}
   Task(const mapping::SubmapId& s_id,
        const std::shared_ptr<const mapping::Submap>& s_submap)
-      : type(ADD_SUBMAP), id(s_id), submap(s_submap) {}
+      : type(ADD_SUBMAP), id(s_id), node_id{0, 0}, submap(s_submap) {}
+
+  Task(const mapping::NodeId& node_id, const sensor::RangeData& range_data)
+      : type(ADD_SUBMAP), id{0, 0}, node_id(node_id), range_data(range_data) {}
   Task(const mapping::MapById<mapping::SubmapId,
                               pose_graph::optimization::SubmapSpec2D>& poses)
-      : type(FLUSH), id{0, 0}, flushed_pose(poses) {}
+      : type(FLUSH), id{0, 0}, node_id{0, 0}, flushed_pose(poses) {}
 };
 class SubmapPointsBatch {
  public:
@@ -53,26 +58,35 @@ class SubmapPointsBatch {
   void AddSubmap(const mapping::SubmapId& id,
                  const std::shared_ptr<const mapping::Submap>& submap);
 
+  void AddRangeData(const mapping::NodeId& id,
+                    const sensor::RangeData& range_data);
+
   void Flush(const mapping::MapById<mapping::SubmapId,
                                     pose_graph::optimization::SubmapSpec2D>&
                  pose_graph_submap);
   nav_msgs::msg::OccupancyGrid ros_grid() {
     std::unique_lock<std::mutex> lk(display_map_mx_);
-    return map_display_;
+    return final_map_;
   }
 
-  bool is_grid() { return !id_rosmap_.empty(); }
+  bool is_grid() { return is_grid_; }
 
  private:
   // loop for mapping realtime
   void MapTaskLoop();
   // update map every time submap coming
   void UpdateMap(const nav_msgs::msg::OccupancyGrid& new_submap);
+
+  // Update map every time range data comming
+  void Update(const sensor::RangeData& range_data);
   // crop the map size suit for map now
   nav_msgs::msg::OccupancyGrid CropGrid();
 
   double resolution_;
   bool quit_thread_;
+  bool first_update_ = true;
+  bool is_grid_ = false;
+  int submap_count_;
   std::mutex job_mx_;
   std::mutex display_map_mx_;
   mapping::MapById<mapping::SubmapId, nav_msgs::msg::OccupancyGrid> id_rosmap_;

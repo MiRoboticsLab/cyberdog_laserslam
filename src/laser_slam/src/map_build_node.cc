@@ -376,11 +376,11 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
   map_display_.reset(
       new SubmapPointsBatch(param.submap_param.resolution, width, width));
 
-  pose_graph_->SetSubmapCallback(
-      [this](const mapping::SubmapId& id,
-             const std::shared_ptr<const mapping::Submap>& data) {
-        SubmapCallback(id, data);
-      });
+  //   pose_graph_->SetSubmapCallback(
+  //       [this](const mapping::SubmapId& id,
+  //              const std::shared_ptr<const mapping::Submap>& data) {
+  //         SubmapCallback(id, data);
+  //       });
   // period publish map
   grid_publish_timer_ = create_wall_timer(
       500ms, std::bind(&MapBuildNode::DisplayMapPublishPeriod, this));
@@ -406,11 +406,11 @@ nav2_util::CallbackReturn MapBuildNode::on_deactivate(
   map_publisher_->on_deactivate();
   pose_graph_.reset(new pose_graph::optimization::BundleAdjustment(
       pose_graph_param_, &thread_pool_));
-  pose_graph_->SetSubmapCallback(
-      [this](const mapping::SubmapId& id,
-             const std::shared_ptr<const mapping::Submap>& data) {
-        SubmapCallback(id, data);
-      });
+  //   pose_graph_->SetSubmapCallback(
+  //       [this](const mapping::SubmapId& id,
+  //              const std::shared_ptr<const mapping::Submap>& data) {
+  //         SubmapCallback(id, data);
+  //       });
   id_data_.clear();
   local_slam_.reset(new LocalSlam(local_slam_param_));
   grid_.reset(new GridForNavigation(
@@ -588,7 +588,8 @@ void MapBuildNode::LaserCallBack(
       const auto submaps =
           local_matching_result->insertion_result->insertion_submaps;
       mapping::NodeId node_id = pose_graph_->AddNode(node, 0, submaps);
-      id_data_[node_id] = local_matching_result->range_data_in_local;
+      map_display_->AddRangeData(node_id,
+                                 local_matching_result->range_data_in_local);
     }
     geometry_msgs::msg::PoseStamped pose_pub;
     pose_pub.header.frame_id = frame_id_;
@@ -651,6 +652,7 @@ void MapBuildNode::LaserCallBack(
 
 void MapBuildNode::DisplayMapPublishPeriod() {
   if (not map_display_->is_grid() || not is_on_active_status_) return;
+  //   if (not is_on_active_status_) return;
   auto map = map_display_->ros_grid();
   map.header.frame_id = frame_id_;
   map_publisher_->publish(map);
@@ -659,7 +661,16 @@ void MapBuildNode::DisplayMapPublishPeriod() {
 void MapBuildNode::SubmapCallback(
     const mapping::SubmapId& id,
     const std::shared_ptr<const mapping::Submap>& data) {
-  map_display_->AddSubmap(id, data);
+  // if (id_count_.count(id) && id_count_[id] > 20) {
+  //   map_display_->AddSubmap(id, data);
+  //   id_count_[id] = 0;
+  //   return;
+  // } else if (id_count_.count(id) && id_count_[id] < 20) {
+  //   ++id_count_[id];
+  //   return;
+  // }
+  // map_display_->AddSubmap(id, data);
+  // ++id_count_[id];
 }
 
 bool MapBuildNode::CheckDirectory(const std::string& path) {

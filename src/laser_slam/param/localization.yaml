@@ -9,7 +9,7 @@ localization_node:
     use_real_time_correlative_scan_matching: true
     num_accumulated: 1
     use_filter: true
-    gravity_constant: 10.0
+    gravity_constant: 9.8
     pose_duration_time: 0.01
     max_time_seconds: 10.0
     max_distance_meters: 0.5
