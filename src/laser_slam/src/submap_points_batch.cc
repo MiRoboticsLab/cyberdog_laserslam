@@ -116,7 +116,6 @@ void SubmapPointsBatch::Update(const sensor::RangeData& range_data) {
   final_map_.info.origin.position.x = origin_.x();
   final_map_.info.origin.position.y = origin_.y();
   if (not first_update_) {
-    LOG(INFO) << "offset is: " << offset_x << " , " << offset_y;
     for (int id_x = 0; id_x < old_height; ++id_x) {
       for (int id_y = 0; id_y < old_width; ++id_y) {
         int new_id_x = id_x + offset_x;
