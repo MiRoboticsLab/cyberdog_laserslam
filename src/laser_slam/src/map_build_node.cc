@@ -588,6 +588,7 @@ void MapBuildNode::LaserCallBack(
       const auto submaps =
           local_matching_result->insertion_result->insertion_submaps;
       mapping::NodeId node_id = pose_graph_->AddNode(node, 0, submaps);
+      id_data_[node_id] = local_matching_result->range_data_in_local;
       map_display_->AddRangeData(node_id,
                                  local_matching_result->range_data_in_local);
     }
