@@ -16,6 +16,7 @@
 #include <deque>
 
 #include "laser_slam/localization.h"
+#include "laser_slam/base_data/pose_recorder.h"
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/int32.hpp"
@@ -85,6 +86,7 @@ class LocalizationNode : public nav2_util::LifecycleNode {
   int reloc_id_;
   std::mutex job_mutex_;
   int64 last_laser_time_;
+  std::string pose_save_path_;
   LocalizationParam localization_param_;
 
   // ros
@@ -120,6 +122,7 @@ class LocalizationNode : public nav2_util::LifecycleNode {
   std::shared_ptr<std::thread> reloc_thread_;
   std::condition_variable job_condvar_;
   JobQueue jobs_;
+  std::shared_ptr<PoseRecorder> pose_recorder_;
 };
 }  // namespace laser_slam
 }  // namespace cartographer

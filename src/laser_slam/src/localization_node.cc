@@ -18,7 +18,8 @@ LocalizationNode::LocalizationNode()
       last_laser_time_(0),
       reloc_client_(nullptr),
       localization_(nullptr),
-      reloc_thread_(nullptr) {}
+      reloc_thread_(nullptr),
+      pose_recorder_(nullptr) {}
 
 LocalizationNode::~LocalizationNode() {}
 
@@ -373,6 +374,14 @@ nav2_util::CallbackReturn LocalizationNode::on_configure(
       stop_location_service_name,
       std::bind(&LocalizationNode::StopLocationCallback, this,
                 std::placeholders::_1, std::placeholders::_2));
+  this->declare_parameter("pose_save_path");
+  this->get_parameter("pose_save_path", pose_save_path_);
+  bool need_save = false;
+  this->declare_parameter("need_save_pose");
+  this->get_parameter("need_save_pose", need_save);
+  if (need_save) {
+    pose_recorder_.reset(new PoseRecorder(pose_save_path_));
+  }
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
@@ -537,6 +546,10 @@ void LocalizationNode::PosePcCallBack(const transform::Rigid3d& pose,
   // Read message content and assign it to
   // corresponding tf variables
   LOG(INFO) << "time stamp: " << common::ToUniversal(pc.returns.time());
+  if (pose_recorder_ != nullptr) {
+    pose_recorder_->InputRecordPose(common::ToUniversal(pc.returns.time()),
+                                    pose.rotation(), pose.translation());
+  }
   t.header.stamp.sec = common::ToRosTime(pc.returns.time()).seconds();
   t.header.stamp.nanosec = common::ToRosTime(pc.returns.time()).nanoseconds();
   t.header.frame_id = "vodom";
@@ -586,6 +599,10 @@ void LocalizationNode::StopLocationCallback(
   is_on_active_status_ = false;
   if (reloc_thread_ && reloc_thread_->joinable()) {
     reloc_thread_->join();
+  }
+  if (pose_recorder_ != nullptr) {
+    pose_recorder_->WriteRecordPose();
+    pose_recorder_->Close();
   }
   bool success = localization_->Stop();
   response->success = success;

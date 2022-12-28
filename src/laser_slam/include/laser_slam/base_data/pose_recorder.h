@@ -14,6 +14,11 @@
 
 namespace cartographer {
 namespace laser_slam {
+struct RecordPose {
+  int64 timestamp;
+  Eigen::Quaterniond rotation;
+  Eigen::Vector3d position;
+};
 class PoseRecorder {
  public:
   PoseRecorder(const std::string& file_name);
@@ -24,11 +29,23 @@ class PoseRecorder {
                                     pose_graph::optimization::TrajectoryNode>&
                  trajectory_nodes);
 
+  void InputRecordPose(int64 timestamp, const Eigen::Quaterniond& rotation,
+                       const Eigen::Vector3d& position) {
+    RecordPose record_pose;
+    record_pose.timestamp = timestamp;
+    record_pose.rotation = rotation;
+    record_pose.position = position;
+    poses_.push_back(record_pose);
+  }
+
+  bool WriteRecordPose();
+
   bool Close();
 
  private:
   std::string file_name_;
   std::ofstream writer_;
+  std::vector<RecordPose> poses_;
 };
 }  // namespace laser_slam
 }  // namespace cartographer
