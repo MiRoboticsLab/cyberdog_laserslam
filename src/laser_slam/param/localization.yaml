@@ -79,3 +79,5 @@ localization_node:
     start_location_service_name: start_location
     stop_location_service_name: stop_location
     is_vision_constraint: false
+    pose_save_path: /home/mi/mapping/pose_data.txt
+    need_save_pose: true

@@ -31,6 +31,20 @@ bool PoseRecorder::Write(
   return true;
 }
 
+bool PoseRecorder::WriteRecordPose() {
+  if (poses_.empty()) return false;
+  writer_.open(file_name_);
+  writer_ << std::fixed;
+  for (auto pose : poses_) {
+    writer_ << std::setprecision(10) << pose.timestamp << " "
+            << pose.position.x() << " " << pose.position.y() << " "
+            << pose.position.z() << " " << pose.rotation.x() << " "
+            << pose.rotation.y() << " " << pose.rotation.z() << " "
+            << pose.rotation.w() << std::endl;
+  }
+  return true;
+}
+
 bool PoseRecorder::Close() { writer_.close(); }
 
 }  // namespace laser_slam
