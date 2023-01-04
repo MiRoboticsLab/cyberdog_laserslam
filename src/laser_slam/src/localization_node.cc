@@ -611,6 +611,7 @@ void LocalizationNode::StopLocationCallback(
                   "Ignoring!!!!";
     return;
   }
+  LOG(INFO) << "Got Stop Location Request";
   is_on_active_status_ = false;
   if (reloc_thread_ && reloc_thread_->joinable()) {
     reloc_thread_->join();
