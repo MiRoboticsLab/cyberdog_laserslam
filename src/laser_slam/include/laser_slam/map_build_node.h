@@ -85,7 +85,13 @@ class MapBuildNode : public nav2_util::LifecycleNode {
 
   bool CheckDirectory(const std::string& path);
 
+  void GetMapPathCallback(
+      rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future);
+
   bool is_on_active_status_;
+  bool is_multi_map_mode_;
+  bool is_map_name_got_;
+  bool save_map_;
   double map_publish_period_sec_;
   int64 last_laser_time_;
   LocalSlamParam local_slam_param_;
@@ -120,6 +126,9 @@ class MapBuildNode : public nav2_util::LifecycleNode {
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr start_mapping_service_;
   //   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr stop_mapping_service_;
   rclcpp::Service<visualization::srv::Stop>::SharedPtr stop_service_;
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr map_name_client_;
+  rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr start_map_notify_client_;
+  rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr stop_map_notify_client_;
   rclcpp::TimerBase::SharedPtr grid_publish_timer_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 };

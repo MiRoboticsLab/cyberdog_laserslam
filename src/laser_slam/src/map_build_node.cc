@@ -15,6 +15,9 @@ namespace laser_slam {
 MapBuildNode::MapBuildNode(int thread_num)
     : nav2_util::LifecycleNode("map_builder", ""),
       is_on_active_status_(false),
+      is_multi_map_mode_(false),
+      is_map_name_got_(false),
+      save_map_(false),
       map_publish_period_sec_(0.0),
       last_laser_time_(0),
       frame_id_(""),
@@ -386,6 +389,29 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
       500ms, std::bind(&MapBuildNode::DisplayMapPublishPeriod, this));
 
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+
+  this->declare_parameter("is_multi_map_mode");
+  this->get_parameter("is_multi_map_mode", is_multi_map_mode_);
+  // if is multi map mode, need communicate with miloc
+  if (is_multi_map_mode_) {
+    std::string map_name_service_name = "get_map_path";
+    this->declare_parameter("map_name_service_name");
+    this->get_parameter("map_name_service_name", map_name_service_name);
+    map_name_client_ =
+        this->create_client<std_srvs::srv::Trigger>(map_name_service_name);
+
+    std::string start_mapping_notify_name = "create_map_service";
+    this->declare_parameter("start_mapping_notify_name");
+    this->get_parameter("start_mapping_notify_name", start_mapping_notify_name);
+    start_map_notify_client_ =
+        this->create_client<std_srvs::srv::SetBool>(start_mapping_notify_name);
+
+    std::string stop_mapping_notify_name = "finish_map_service";
+    this->declare_parameter("stop_mapping_notify_name");
+    this->get_parameter("stop_mapping_notify_name", stop_mapping_notify_name);
+    stop_map_notify_client_ =
+        this->create_client<std_srvs::srv::SetBool>(stop_mapping_notify_name);
+  }
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
@@ -480,6 +506,16 @@ bool MapBuildNode::SaveMap(bool save_map, const std::string& map_name) {
   return true;
 }
 
+void MapBuildNode::GetMapPathCallback(
+    rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+  if (future.get()->success) {
+    auto path = future.get()->message;
+    LOG(INFO) << "path is: " << path;
+    map_save_path_ = path + "/";
+    SaveMap(save_map_, "map");
+  }
+}
+
 void MapBuildNode::StartMappingCallback(
     const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
     std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
@@ -490,6 +526,19 @@ void MapBuildNode::StartMappingCallback(
     return;
   }
   is_on_active_status_ = request->data;
+  if (is_multi_map_mode_) {
+    auto req = std::make_shared<std_srvs::srv::SetBool::Request>();
+    req.get()->data = false;
+    while (!start_map_notify_client_->wait_for_service(1s)) {
+      if (!rclcpp::ok()) {
+        LOG(ERROR) << "Interrupted while waiting for the start notify service, "
+                      "Exiting";
+        response->success = false;
+        return;
+      }
+    }
+    start_map_notify_client_->async_send_request(req);
+  }
   response->success = true;
 }
 
@@ -503,7 +552,37 @@ void MapBuildNode::StopMappingCallback(
     return;
   }
   is_on_active_status_ = false;
-  bool success = SaveMap(request->finish, request->map_name);
+  save_map_ = request->finish;
+  bool success = true;
+  if (!is_multi_map_mode_) {
+    success = SaveMap(request->finish, request->map_name);
+  } else {
+    auto req = std::make_shared<std_srvs::srv::Trigger::Request>();
+    while (!map_name_client_->wait_for_service(1s)) {
+      if (!rclcpp::ok()) {
+        LOG(ERROR) << "Interrupted while waiting for the service, Exiting";
+        response->success = false;
+        return;
+      }
+    }
+
+    auto result = map_name_client_->async_send_request(
+        req, std::bind(&MapBuildNode::GetMapPathCallback, this,
+                       std::placeholders::_1));
+    LOG(INFO) << "request sended";
+    auto req_notify = std::make_shared<std_srvs::srv::SetBool::Request>();
+    req_notify.get()->data = false;
+    while (!stop_map_notify_client_->wait_for_service(1s)) {
+      if (!rclcpp::ok()) {
+        LOG(ERROR)
+            << "Interrupted while waiting for the notify service, Exiting";
+        response->success = false;
+        return;
+      }
+    }
+    stop_map_notify_client_->async_send_request(req_notify);
+  }
+
   response->success = success;
 }
 
