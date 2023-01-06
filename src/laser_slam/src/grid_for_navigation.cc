@@ -8,9 +8,9 @@
 
 namespace cartographer {
 namespace laser_slam {
-void GridForNavigation::RayCastByProbability(
+bool GridForNavigation::RayCastByProbability(
     const std::vector<sensor::RangeData>& range_datas) {
-  CHECK(!range_datas.empty());
+  if (range_datas.empty()) return false;
   for (size_t i = 0; i < range_datas.size(); ++i) {
     if (grid_ == nullptr) {
       Eigen::Vector2f origin = range_datas[i].origin.head(2);
@@ -24,6 +24,7 @@ void GridForNavigation::RayCastByProbability(
     }
     range_data_inserter_->Insert(range_datas[i], grid_.get());
   }
+  return true;
   // width_ = grid_->limits().cell_limits().num_y_cells;
   // height_ = grid_->limits().cell_limits().num_x_cells;
 }
