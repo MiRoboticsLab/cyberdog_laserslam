@@ -78,4 +78,5 @@ map_builder:
     start_mapping_service_name: start_mapping
     stop_mapping_service_name: stop_mapping
     init_width: 100000
+    is_multi_map_mode: false
      
