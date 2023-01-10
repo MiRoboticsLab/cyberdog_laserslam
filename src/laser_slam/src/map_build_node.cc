@@ -495,7 +495,11 @@ bool MapBuildNode::SaveMap(bool save_map, const std::string& map_name) {
           sensor::TransformRangeData(range_data, local_to_global.cast<float>());
       range_datas.push_back(pc);
     }
-    grid_->RayCastByProbability(range_datas);
+    auto success = grid_->RayCastByProbability(range_datas);
+    if (not success) {
+      LOG(WARNING) << "No Range Data";
+      return false;
+    }
     std::string map_pt = map_save_path_ + map_name;
     grid_->WritePgmByProbabilityGrid(map_pt);
     pose_recorder_->Write(pose_graph_data.trajectory_nodes);

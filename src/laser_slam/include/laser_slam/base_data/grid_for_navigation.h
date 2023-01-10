@@ -49,7 +49,7 @@ class GridForNavigation {
   void RayCast(const std::vector<sensor::RangeData>& range_datas);
   Eigen::Vector2d origin() const { return origin_; }
 
-  void RayCastByProbability(const std::vector<sensor::RangeData>& range_datas);
+  bool RayCastByProbability(const std::vector<sensor::RangeData>& range_datas);
 
   void WritePgm(const std::string& filestem);
   
