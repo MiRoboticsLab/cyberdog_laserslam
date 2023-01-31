@@ -19,6 +19,7 @@
 #include "laser_slam/base_data/grid_for_navigation.h"
 #include "laser_slam/base_data/pose_recorder.h"
 #include "laser_slam/base_data/submap_points_batch.h"
+#include "laser_slam/base_data/grid_for_display.h"
 #include "pose_graph/bundle_adjustment.h"
 #include "protos/proto_stream_interface.h"
 #include "protos/proto_stream.h"
@@ -119,7 +120,6 @@ class MapBuildNode : public nav2_util::LifecycleNode {
   pose_graph::optimization::BundleAdjustmentPtr pose_graph_;
   std::shared_ptr<PoseRecorder> pose_recorder_;
   GridForNavigationPtr grid_;
-  SubmapPointsBatchPtr map_display_;
   Eigen::Matrix3d transform_;
   transform::Rigid3d laser_t_odom_;
   laser_geometry::LaserProjection projector_;
@@ -129,8 +129,9 @@ class MapBuildNode : public nav2_util::LifecycleNode {
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr map_name_client_;
   rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr start_map_notify_client_;
   rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr stop_map_notify_client_;
-  rclcpp::TimerBase::SharedPtr grid_publish_timer_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  GridForDisplayPtr display_ptr_;
+  mapping::SubmapId id_;
 };
 }  // namespace laser_slam
 }  // namespace cartographer
