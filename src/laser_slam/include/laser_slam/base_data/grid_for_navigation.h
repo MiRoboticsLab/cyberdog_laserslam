@@ -52,7 +52,7 @@ class GridForNavigation {
   bool RayCastByProbability(const std::vector<sensor::RangeData>& range_datas);
 
   void WritePgm(const std::string& filestem);
-  
+
   void WritePgmByProbabilityGrid(const std::string& filestem);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
  private:
@@ -60,7 +60,10 @@ class GridForNavigation {
   // void CastOpenArea(const Eigen::Vector3f& origin, const Eigen::Vector3f&
   // hit);
   Eigen::Array2i GetCellIndex(const Eigen::Vector2d& position);
+
   void CastRayOnMap(const std::vector<sensor::RangeData>& range_datas);
+
+
   int width_;
   int height_;
   double resolution_;

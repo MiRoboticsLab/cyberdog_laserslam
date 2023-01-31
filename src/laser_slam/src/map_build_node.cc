@@ -26,7 +26,7 @@ MapBuildNode::MapBuildNode(int thread_num)
       pose_graph_(nullptr),
       pose_recorder_(nullptr),
       grid_(nullptr),
-      map_display_(nullptr) {}
+      id_{0, 0} {}
 
 MapBuildNode::~MapBuildNode() {}
 
@@ -372,21 +372,6 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
       stop_mapping_service_name,
       std::bind(&MapBuildNode::StopMappingCallback, this, std::placeholders::_1,
                 std::placeholders::_2));
-  // Grow map for display
-  int width;
-  this->declare_parameter("init_width");
-  this->get_parameter("init_width", width);
-  map_display_.reset(
-      new SubmapPointsBatch(param.submap_param.resolution, width, width));
-
-  //   pose_graph_->SetSubmapCallback(
-  //       [this](const mapping::SubmapId& id,
-  //              const std::shared_ptr<const mapping::Submap>& data) {
-  //         SubmapCallback(id, data);
-  //       });
-  // period publish map
-  grid_publish_timer_ = create_wall_timer(
-      500ms, std::bind(&MapBuildNode::DisplayMapPublishPeriod, this));
 
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
@@ -412,6 +397,8 @@ nav2_util::CallbackReturn MapBuildNode::on_configure(
     stop_map_notify_client_ =
         this->create_client<std_srvs::srv::SetBool>(stop_mapping_notify_name);
   }
+  display_ptr_.reset(new GridForDisplay());
+  display_ptr_->SetMapPublisher(map_publisher_);
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
@@ -420,7 +407,8 @@ nav2_util::CallbackReturn MapBuildNode::on_activate(
   pc_publisher_->on_activate();
   pose_publisher_->on_activate();
   map_publisher_->on_activate();
-  map_display_->StartThread();
+  //   map_display_->StartThread();
+  display_ptr_->StartThread();
   createBond();
   return nav2_util::CallbackReturn::SUCCESS;
 }
@@ -432,16 +420,12 @@ nav2_util::CallbackReturn MapBuildNode::on_deactivate(
   map_publisher_->on_deactivate();
   pose_graph_.reset(new pose_graph::optimization::BundleAdjustment(
       pose_graph_param_, &thread_pool_));
-  //   pose_graph_->SetSubmapCallback(
-  //       [this](const mapping::SubmapId& id,
-  //              const std::shared_ptr<const mapping::Submap>& data) {
-  //         SubmapCallback(id, data);
-  //       });
   id_data_.clear();
   local_slam_.reset(new LocalSlam(local_slam_param_));
   grid_.reset(new GridForNavigation(
       0.05, local_slam_param_.submap_param.probability_insert_param));
-  map_display_.reset(new SubmapPointsBatch(0.05, 1000, 1000));
+  display_ptr_.reset(new GridForDisplay());
+  display_ptr_->SetMapPublisher(map_publisher_);
   LOG(INFO) << "deactive success";
   destroyBond();
   return nav2_util::CallbackReturn::SUCCESS;
@@ -452,7 +436,7 @@ nav2_util::CallbackReturn MapBuildNode::on_cleanup(
   pose_graph_.reset();
   pose_recorder_.reset();
   grid_.reset();
-  map_display_.reset();
+  display_ptr_.reset();
   is_on_active_status_ = false;
   return nav2_util::CallbackReturn::SUCCESS;
 }
@@ -464,7 +448,8 @@ nav2_util::CallbackReturn MapBuildNode::on_shutdown(
 }
 
 bool MapBuildNode::SaveMap(bool save_map, const std::string& map_name) {
-  map_display_->QuitThread();
+  //   map_display_->QuitThread();
+  display_ptr_->QuitThread();
   pose_graph_->RunFinalOptimization();
   if (save_map) {
     bool suc = CheckDirectory(map_save_path_);
@@ -672,8 +657,10 @@ void MapBuildNode::LaserCallBack(
           local_matching_result->insertion_result->insertion_submaps;
       mapping::NodeId node_id = pose_graph_->AddNode(node, 0, submaps);
       id_data_[node_id] = local_matching_result->range_data_in_local;
-      map_display_->AddRangeData(node_id,
-                                 local_matching_result->range_data_in_local);
+      display_ptr_->AddSubmap(id_, submaps[0]);
+      if (submaps[0]->insertion_finished()) {
+        ++id_.submap_index;
+      }
     }
     geometry_msgs::msg::PoseStamped pose_pub;
     pose_pub.header.frame_id = frame_id_;
@@ -732,29 +719,6 @@ void MapBuildNode::LaserCallBack(
     pub_pc.header.frame_id = frame_id_;
     pc_publisher_->publish(pub_pc);
   }
-}
-
-void MapBuildNode::DisplayMapPublishPeriod() {
-  if (not map_display_->is_grid() || not is_on_active_status_) return;
-  //   if (not is_on_active_status_) return;
-  auto map = map_display_->ros_grid();
-  map.header.frame_id = frame_id_;
-  map_publisher_->publish(map);
-}
-
-void MapBuildNode::SubmapCallback(
-    const mapping::SubmapId& id,
-    const std::shared_ptr<const mapping::Submap>& data) {
-  // if (id_count_.count(id) && id_count_[id] > 20) {
-  //   map_display_->AddSubmap(id, data);
-  //   id_count_[id] = 0;
-  //   return;
-  // } else if (id_count_.count(id) && id_count_[id] < 20) {
-  //   ++id_count_[id];
-  //   return;
-  // }
-  // map_display_->AddSubmap(id, data);
-  // ++id_count_[id];
 }
 
 bool MapBuildNode::CheckDirectory(const std::string& path) {

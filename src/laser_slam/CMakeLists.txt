@@ -93,7 +93,8 @@ add_library(${PROJECT_NAME} src/grid_for_navigation.cc
   src/pose_recorder.cc
   src/submap_points_batch.cc
   src/map_build_node.cc
-  src/localization_node.cc)
+  src/localization_node.cc
+  src/grid_for_display.cc)
 
 ament_target_dependencies(${PROJECT_NAME}
   "rclcpp"
