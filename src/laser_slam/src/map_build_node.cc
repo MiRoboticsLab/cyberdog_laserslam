@@ -701,6 +701,20 @@ void MapBuildNode::LaserCallBack(
 
     tf_broadcaster_->sendTransform(t);
 
+    geometry_msgs::msg::TransformStamped t1;
+    t1.header.stamp = laser->header.stamp;
+    t1.header.frame_id = "map";
+    t1.child_frame_id = "vodom";
+    t1.transform.translation.x = 0.0;
+    t1.transform.translation.y = 0.0;
+    t1.transform.translation.z = 0.0;
+
+    t1.transform.rotation.x = 0.0;
+    t1.transform.rotation.y = 0.0;
+    t1.transform.rotation.z = 0.0;
+    t1.transform.rotation.w = 1.0;
+    tf_broadcaster_->sendTransform(t1);
+
     pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
     pcl_cloud.points.resize(
         local_matching_result->range_data_in_local.returns.size());
