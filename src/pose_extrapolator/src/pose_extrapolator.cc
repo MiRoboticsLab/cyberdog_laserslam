@@ -147,6 +147,10 @@ void PoseExtrapolator::AddOdometryData(const OdomMeasurement &odom_data) {
         LOG(ERROR) << "ODOMETRY DATA PROBLEM";
         return;
     }
+    if (odometry_imu_tracker_->time() > odometry_newest_data.time) {
+        LOG(ERROR) << "Odom time lower than last extrapolator time";
+        return;
+    }
     const double odometry_time_delta = common::ToSeconds(
         odometry_oldest_data.time - odometry_newest_data.time);
     const transform::Rigid3d delta_pose =

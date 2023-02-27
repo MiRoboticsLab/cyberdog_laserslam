@@ -61,6 +61,76 @@ NodeId BundleAdjustment::AddNode(
     });
     return node_id;
 }
+
+bool BundleAdjustment::Stop() {
+    constraint_builder_.SetIsReloc();
+    constraint_builder_.SetLocalizationMode(true);
+    if (reloc_work_queue_ != nullptr) {
+        LOG(INFO) << "Waiting for reloc computation";
+        WaitForAllRelocComputations();
+        CHECK(reloc_work_queue_ == nullptr);
+    }
+    WaitForAllComputations();
+    absl::MutexLock locker(&work_queue_mutex_);
+    CHECK(work_queue_ == nullptr);
+    LOG(INFO) << "stop success";
+    return true;
+}
+
+NodeId BundleAdjustment::AddLocalizationNode(
+    std::shared_ptr<const TrajectoryNode::Data> constant_data,
+    int trajectory_id,
+    const std::vector<std::shared_ptr<const mapping::Submap2D>>
+        &insertion_submaps) {
+    // append node which update pose up to last optimized node
+    const transform::Rigid3d optimized_pose(
+        GetLocalToGlobalTransform(trajectory_id) * constant_data->local_pose);
+    LOG_EVERY_N(INFO, 100) << "newest pose is: "
+                           << optimized_pose.DebugString();
+    NodeId node_id(0, 0);
+    if (reloc_work_queue_ == nullptr && is_reloc_) {
+        constraint_builder_.SetLocalizationMode(false);
+        node_id = AppendNode(constant_data, trajectory_id, insertion_submaps,
+                             optimized_pose);
+    } else if (not is_reloc_) {
+        absl::MutexLock locker(&pose_graph_mutex_);
+        node_id = data_.trajectory_nodes.Append(
+            trajectory_id, TrajectoryNode{constant_data, optimized_pose});
+        constraint_builder_.SetLocalizationMode(true);
+        if (data_.submap_data.SizeOfTrajectoryOrZero(trajectory_id) == 0 ||
+            std::prev(data_.submap_data.EndOfTrajectory(trajectory_id))
+                    ->data.submap != insertion_submaps.back()) {
+            const SubmapId submap_id =
+                data_.submap_data.Append(trajectory_id, InternalSubmapData());
+            data_.submap_data.at(submap_id).submap = insertion_submaps.back();
+        }
+    }
+    // if the front of submaps finished?
+    const bool newly_finished_submap =
+        insertion_submaps.front()->insertion_finished();
+    // Relocalization Phase, Add Reloc Node to find Reloc constraints
+    // Normal location phase
+    if (not is_reloc_) {
+        {
+            absl::MutexLock locker(&num_reloc_nodes_mutex_);
+            ++num_reloc_nodes_;
+            LOG(INFO) << "Nodes in bundle adjustment is: " << num_reloc_nodes_;
+        }
+        AddRelocWorkItem([=]() LOCKS_EXCLUDED(pose_graph_mutex_) {
+            return ComputeConstraintsForRelocNode(node_id, insertion_submaps,
+                                                  newly_finished_submap);
+        });
+    } else {
+        if (reloc_work_queue_ == nullptr) {
+            LOG(INFO) << "Add Localization Node Here";
+            AddWorkItem([=]() LOCKS_EXCLUDED(pose_graph_mutex_) {
+                return ComputeConstraintsForNode(node_id, insertion_submaps,
+                                                 newly_finished_submap);
+            });
+        }
+    }
+    return node_id;
+}
 // TO_DO(feixiang zeng) : Lack of initial submap global pose
 NodeId BundleAdjustment::AddFirstRelocNode(
     int trajectory_id,
@@ -307,6 +377,41 @@ void BundleAdjustment::AddWorkItem(
     }
 }
 
+void BundleAdjustment::AddRelocWorkItem(
+    const std::function<WorkItem::Result()> &work_item) {
+    {
+        absl::MutexLock locker(&reloc_work_queue_mutex_);
+        if (reloc_work_queue_ == nullptr) {
+            reloc_work_queue_ = std::make_unique<WorkQueue>();
+            auto task = std::make_unique<common::Task>();
+            task->SetWorkItem([this]() { DrainRelocWorkQueue(); });
+            thread_pool_->Schedule(std::move(task));
+        }
+        const auto now = std::chrono::steady_clock::now();
+        reloc_work_queue_->push_back({now, work_item});
+    }
+}
+
+void BundleAdjustment::DrainRelocWorkQueue() {
+    std::function<WorkItem::Result()> work_item;
+    {
+        absl::MutexLock locker(&reloc_work_queue_mutex_);
+        if (reloc_work_queue_->empty()) {
+            reloc_work_queue_.reset();
+            LOG(INFO) << "reloc work queue empty";
+            return;
+        }
+        work_item = reloc_work_queue_->front().task;
+        reloc_work_queue_->pop_front();
+        LOG(INFO) << "Pop Reloc Work Queue";
+    }
+    work_item();
+    constraint_builder_.RelocWhenDone(
+        [this](const ConstraintBuilder::Result &result) {
+            HandleRelocWorkQueue(result);
+        });
+}
+
 void BundleAdjustment::DrainWorkQueue() {
     bool process_work_queue = true;
     size_t work_queue_size;
@@ -336,6 +441,79 @@ void BundleAdjustment::DrainWorkQueue() {
         [this](const ConstraintBuilder::Result &result) {
             HandleWorkQueue(result);
         });
+}
+
+void BundleAdjustment::HandleRelocWorkQueue(
+    const ConstraintBuilder::Result &result) {
+    LOG(INFO) << "Reloc result in: " << result.size();
+    // if (is_reloc_)
+    //     DrainRelocWorkQueue();
+    // Verify The Reloc Pose if vision reloc pose is
+    if (result.size() > 0) {
+        LOG(INFO) << "Found Reloc Constraints, Which Size is: "
+                  << result.size();
+        if (param_.need_vision_verify) {
+            std::vector<NodeId> ids;
+            std::map<NodeId, transform::Rigid3d> id_global_pose;
+            bool pose_arrive = true;
+            std::chrono::time_point<std::chrono::high_resolution_clock> start =
+                std::chrono::high_resolution_clock::now();
+            while (ids.empty()) {
+                LOG(INFO)
+                    << "Still No Correspond Node Id Vision Constraint Arrive";
+                for (auto &constraint : result) {
+                    auto node_id = constraint.node_id;
+                    if (vision_id_pose_.Contains(node_id)) {
+                        ids.push_back(node_id);
+                        auto global_pose =
+                            constraint.pose.zbar_ij *
+                            data_.submap_data.at(constraint.submap_id)
+                                .submap->local_pose();
+                        id_global_pose[node_id] = global_pose;
+                    }
+                }
+                auto duration =
+                    std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::high_resolution_clock::now() - start)
+                        .count();
+                if (duration * 0.000001 > 1) {
+                    pose_arrive = false;
+                    break;
+                }
+            }
+            if (pose_arrive) {
+                for (auto id : ids) {
+                    auto global_pose_laser = id_global_pose[id];
+                    auto global_pose_vision = vision_id_pose_.at(id);
+                    // compare two pose to verify
+                }
+            } else {
+                LOG(INFO) << "Found Reloc Constraints";
+                // use the laser reloc constraint directly
+
+                {
+                    absl::MutexLock locker(&pose_graph_mutex_);
+                    data_.constraints.insert(data_.constraints.end(),
+                                             result.begin(), result.end());
+                }
+                RunOptimization();
+
+                is_reloc_ = true;
+                constraint_builder_.SetIsReloc();
+            }
+        } else {
+            // insert constraint directly, run optimiation
+            {
+                absl::MutexLock locker(&pose_graph_mutex_);
+                data_.constraints.insert(data_.constraints.end(),
+                                         result.begin(), result.end());
+            }
+            RunOptimization();
+            is_reloc_ = true;
+            constraint_builder_.SetIsReloc();
+        }
+    }
+    DrainRelocWorkQueue();
 }
 
 void BundleAdjustment::HandleWorkQueue(
@@ -454,6 +632,26 @@ void BundleAdjustment::RelocConstraintsWorkHandle(
     }
 }
 
+void BundleAdjustment::ComputeRelocConstraint(const NodeId &node_id,
+                                              const SubmapId &submap_id) {
+    const TrajectoryNode::Data *constant_data;
+    const mapping::Submap2D *submap;
+    {
+        absl::MutexLock locker(&pose_graph_mutex_);
+        CHECK(data_.submap_data.at(submap_id).state == SubmapState::kFinished);
+        if (!data_.submap_data.at(submap_id).submap->insertion_finished()) {
+            return;
+        }
+        constant_data = data_.trajectory_nodes.at(node_id).constant_data.get();
+        submap = static_cast<const mapping::Submap2D *>(
+            data_.submap_data.at(submap_id).submap.get());
+    }
+    const transform::Rigid2d initial_relative_pose =
+        transform::Rigid2d::Identity();
+    constraint_builder_.FindRelocLoopConstraint(
+        submap_id, submap, node_id, constant_data, initial_relative_pose);
+}
+
 // Compute reloc constraints for node
 bool BundleAdjustment::ComputeRelocConstraintsForNode(const NodeId &node_id) {
     // Submaps from last pose graph
@@ -513,6 +711,91 @@ bool BundleAdjustment::ComputeRelocConstraintsForNode(const NodeId &node_id) {
 
     return found_reloc_constraints_;
 }
+WorkItem::Result BundleAdjustment::ComputeConstraintsForRelocNode(
+    const NodeId &node_id,
+    std::vector<std::shared_ptr<const mapping::Submap2D>> insertion_submaps,
+    bool newly_finished_submap) {
+
+    std::vector<SubmapId> submap_ids;
+    std::set<NodeId> newly_finished_submap_node_ids;
+    // Add Data to pose_graph data, same as ComputeConstraintsForNode
+    {
+        absl::MutexLock locker(&pose_graph_mutex_);
+        const auto &constant_data =
+            data_.trajectory_nodes.at(node_id).constant_data;
+        submap_ids = InitializeGlobalSubmapPose(
+            node_id.trajectory_id, constant_data->time, insertion_submaps);
+        CHECK_EQ(insertion_submaps.size(), submap_ids.size());
+        const SubmapId matching_id = submap_ids.front();
+        // gravity aligned pose which without angle info
+        const transform::Rigid2d local_pose_2d = transform::Project2D(
+            constant_data->local_pose *
+            transform::Rigid3d::Rotation(
+                constant_data->gravity_alignment.inverse()));
+        LOG_EVERY_N(INFO, 50)
+            << "global pose is: "
+            << optimization_problem_->submap_data()
+                   .at(matching_id)
+                   .global_pose.DebugString()
+            << " id of submap is: " << matching_id.submap_index
+            << "gravity alignment is: "
+            << constant_data->gravity_alignment.toRotationMatrix();
+        // global pose 2d is calculate pose of node from submap local pose
+        // optimized
+        const transform::Rigid2d global_pose_2d =
+            optimization_problem_->submap_data().at(matching_id).global_pose *
+            transform::Project2D(insertion_submaps.front()->local_pose())
+                .inverse() *
+            local_pose_2d;
+        LOG_EVERY_N(INFO, 50)
+            << "global pose is: " << global_pose_2d.DebugString()
+            << " local pose is: " << local_pose_2d.DebugString();
+        optimization_problem_->AddTrajectoryNode(
+            matching_id.trajectory_id,
+            NodeSpec2D{constant_data->time, local_pose_2d, global_pose_2d,
+                       constant_data->gravity_alignment});
+        for (size_t i = 0; i < insertion_submaps.size(); ++i) {
+            const SubmapId submap_id = submap_ids[i];
+            CHECK(data_.submap_data.at(submap_id).state ==
+                  SubmapState::kNoConstraintSearch);
+            data_.submap_data.at(submap_id).node_ids.emplace(node_id);
+            const transform::Rigid2d constraint_transform =
+                transform::Project2D(insertion_submaps[i]->local_pose())
+                    .inverse() *
+                local_pose_2d;
+            data_.constraints.push_back(
+                Constraint{submap_id,
+                           node_id,
+                           {transform::Embed3D(constraint_transform),
+                            param_.matcher_translation_weight,
+                            param_.matcher_rotation_weight},
+                           Constraint::INTRA_SUBMAP});
+        }
+        if (newly_finished_submap) {
+            const SubmapId newly_finished_submap_id = submap_ids.front();
+            InternalSubmapData &finished_submap_data =
+                data_.submap_data.at(newly_finished_submap_id);
+            CHECK(finished_submap_data.state ==
+                  SubmapState::kNoConstraintSearch);
+            finished_submap_data.state = SubmapState::kFinished;
+            newly_finished_submap_node_ids = finished_submap_data.node_ids;
+        }
+    }
+    // INTER Constraint search on submap from last trajectory id
+    for (const auto &submap_id_data : data_.submap_data) {
+        InternalTrajectoryState state =
+            data_.trajectories_state[submap_id_data.id.trajectory_id];
+        if (state.state == TrajectoryState::FROZEN) {
+            ComputeRelocConstraint(node_id, submap_id_data.id);
+        }
+    }
+    LOG(INFO) << "Compute reloc constraint";
+    constraint_builder_.NotifyEndOfOneRelocNode();
+    if (not found_reloc_constraints_)
+        return WorkItem::Result::kDoNotRunOptimization;
+    return WorkItem::Result::kRunOptimization;
+}
+
 // TO_DO(Feixiang Zeng) : Add match full submap strategy when reloc
 WorkItem::Result BundleAdjustment::ComputeConstraintsForNode(
     const NodeId &node_id,
@@ -678,6 +961,51 @@ void BundleAdjustment::RunFinalOptimization() {
     WaitForAllComputations();
 }
 
+void BundleAdjustment::WaitForAllRelocComputations() {
+    const int num_finished_reloc_nodes_at_start =
+        constraint_builder_.GetNumFinishedRelocNodes();
+    int num_reloc_trajectory_nodes;
+    {
+        absl::MutexLock locker(&num_reloc_nodes_mutex_);
+        num_reloc_trajectory_nodes = num_reloc_nodes_;
+    }
+
+    auto report_progress = [this, num_reloc_trajectory_nodes,
+                            num_finished_reloc_nodes_at_start]() {
+        // Log progress on nodes only when we are actually processing nodes.
+        if (num_reloc_trajectory_nodes != num_finished_reloc_nodes_at_start) {
+            std::ostringstream progress_info;
+            progress_info
+                << "Optimizing: " << std::fixed << std::setprecision(1)
+                << 100. *
+                       (constraint_builder_.GetNumFinishedRelocNodes() -
+                        num_finished_reloc_nodes_at_start) /
+                       (num_reloc_trajectory_nodes -
+                        num_finished_reloc_nodes_at_start)
+                << "%...";
+            std::cout << "\r\x1b[K" << progress_info.str() << std::flush;
+        }
+    };
+
+    {
+        const auto predicate =
+            [this]() EXCLUSIVE_LOCKS_REQUIRED(reloc_work_queue_mutex_) {
+                return reloc_work_queue_ == nullptr;
+            };
+        absl::MutexLock locker(&reloc_work_queue_mutex_);
+        while (!reloc_work_queue_mutex_.AwaitWithTimeout(
+            absl::Condition(&predicate),
+            absl::FromChrono(common::FromSeconds(1.)))) {
+            LOG(INFO) << "IN WHILE";
+            report_progress();
+        }
+    }
+
+    CHECK_EQ(constraint_builder_.GetNumFinishedRelocNodes(),
+             num_reloc_trajectory_nodes);
+    std::cout << "\r\x1b[RelocThread: Done.     " << std::endl;
+}
+
 void BundleAdjustment::WaitForAllComputations() {
     int num_trajectory_nodes;
     {
@@ -715,6 +1043,7 @@ void BundleAdjustment::WaitForAllComputations() {
         while (!work_queue_mutex_.AwaitWithTimeout(
             absl::Condition(&predicate),
             absl::FromChrono(common::FromSeconds(1.)))) {
+            LOG(INFO) << "IN While";
             report_progress();
         }
     }
@@ -736,6 +1065,7 @@ void BundleAdjustment::WaitForAllComputations() {
     while (!pose_graph_mutex_.AwaitWithTimeout(
         absl::Condition(&predicate),
         absl::FromChrono(common::FromSeconds(1.)))) {
+        LOG(INFO) << "IN While";
         report_progress();
     }
     CHECK_EQ(constraint_builder_.GetNumFinishedNodes(), num_trajectory_nodes);

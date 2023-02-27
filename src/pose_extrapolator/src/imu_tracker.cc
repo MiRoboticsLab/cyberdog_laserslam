@@ -30,65 +30,70 @@ namespace filter {
 
 ImuTracker::ImuTracker(const double imu_gravity_time_constant,
                        const common::Time time)
-    : imu_gravity_time_constant_(imu_gravity_time_constant),
-      time_(time),
+    : imu_gravity_time_constant_(imu_gravity_time_constant), time_(time),
       last_linear_acceleration_time_(common::Time::min()),
       orientation_(Eigen::Quaterniond::Identity()),
       gravity_vector_(Eigen::Vector3d::UnitZ()),
       imu_angular_velocity_(Eigen::Vector3d::Zero()) {}
 
 ImuTracker::ImuTracker(double imu_gravity_time_constant,
-                       const Eigen::Quaterniond& initial_orientation,
+                       const Eigen::Quaterniond &initial_orientation,
                        common::Time time)
-    : imu_gravity_time_constant_(imu_gravity_time_constant),
-      time_(time),
+    : imu_gravity_time_constant_(imu_gravity_time_constant), time_(time),
       last_linear_acceleration_time_(common::Time::min()),
       orientation_(initial_orientation),
       gravity_vector_(orientation_.conjugate() * Eigen::Vector3d::UnitZ()),
       imu_angular_velocity_(Eigen::Vector3d::Zero()) {}
 
-Eigen::Quaterniond ImuTracker::FromTwoVectors(const Eigen::Vector3d& a,
-                                              const Eigen::Vector3d& b) {
-  return Eigen::Quaterniond::FromTwoVectors(a, b);
+Eigen::Quaterniond ImuTracker::FromTwoVectors(const Eigen::Vector3d &a,
+                                              const Eigen::Vector3d &b) {
+    return Eigen::Quaterniond::FromTwoVectors(a, b);
 }
 
 void ImuTracker::Advance(const common::Time time) {
-  CHECK_LE(time_, time);
-  const double delta_t = common::ToSeconds(time - time_);
-  const Eigen::Quaterniond rotation =
-      transform::AngleAxisVectorToRotationQuaternion(
-          Eigen::Vector3d(imu_angular_velocity_ * delta_t));
-  orientation_ = (orientation_ * rotation).normalized();
-  gravity_vector_ = rotation.conjugate() * gravity_vector_;
-  time_ = time;
+    // CHECK_LE(time_, time);
+    if (time_ > time) {
+        LOG(WARNING) << "Imu Tracker Timestamp Problem"
+                     << common::ToUniversal(time) << " , "
+                     << common::ToUniversal(time_);
+        time_ = time;
+        return;
+    }
+    const double delta_t = common::ToSeconds(time - time_);
+    const Eigen::Quaterniond rotation =
+        transform::AngleAxisVectorToRotationQuaternion(
+            Eigen::Vector3d(imu_angular_velocity_ * delta_t));
+    orientation_ = (orientation_ * rotation).normalized();
+    gravity_vector_ = rotation.conjugate() * gravity_vector_;
+    time_ = time;
 }
 
 void ImuTracker::AddImuLinearAccelerationObservation(
-    const Eigen::Vector3d& imu_linear_acceleration) {
-  // Update the 'gravity_vector_' with an exponential moving average using the
-  // 'imu_gravity_time_constant'.
-  const double delta_t =
-      last_linear_acceleration_time_ > common::Time::min()
-          ? common::ToSeconds(time_ - last_linear_acceleration_time_)
-          : std::numeric_limits<double>::infinity();
-  last_linear_acceleration_time_ = time_;
-  const double alpha = 1. - std::exp(-delta_t / imu_gravity_time_constant_);
-  gravity_vector_ =
-      (1. - alpha) * gravity_vector_ + alpha * imu_linear_acceleration;
-  // Change the 'orientation_' so that it agrees with the current
-  // 'gravity_vector_'.
-  const Eigen::Quaterniond rotation = FromTwoVectors(
-      gravity_vector_, orientation_.conjugate() * Eigen::Vector3d::UnitZ());
-  orientation_ = (orientation_ * rotation).normalized();
-  CHECK_GT((orientation_ * gravity_vector_).z(), 0.);
-  CHECK_GT((orientation_ * gravity_vector_).normalized().z(), 0.99);
+    const Eigen::Vector3d &imu_linear_acceleration) {
+    // Update the 'gravity_vector_' with an exponential moving average using the
+    // 'imu_gravity_time_constant'.
+    const double delta_t =
+        last_linear_acceleration_time_ > common::Time::min()
+            ? common::ToSeconds(time_ - last_linear_acceleration_time_)
+            : std::numeric_limits<double>::infinity();
+    last_linear_acceleration_time_ = time_;
+    const double alpha = 1. - std::exp(-delta_t / imu_gravity_time_constant_);
+    gravity_vector_ =
+        (1. - alpha) * gravity_vector_ + alpha * imu_linear_acceleration;
+    // Change the 'orientation_' so that it agrees with the current
+    // 'gravity_vector_'.
+    const Eigen::Quaterniond rotation = FromTwoVectors(
+        gravity_vector_, orientation_.conjugate() * Eigen::Vector3d::UnitZ());
+    orientation_ = (orientation_ * rotation).normalized();
+    CHECK_GT((orientation_ * gravity_vector_).z(), 0.);
+    CHECK_GT((orientation_ * gravity_vector_).normalized().z(), 0.99);
 }
 
 void ImuTracker::AddImuAngularVelocityObservation(
-    const Eigen::Vector3d& imu_angular_velocity) {
-  imu_angular_velocity_ = imu_angular_velocity;
+    const Eigen::Vector3d &imu_angular_velocity) {
+    imu_angular_velocity_ = imu_angular_velocity;
 }
 
-}  // namespace filter
-}  // namespace pose_extrapolator
-}  // namespace cartographer
+} // namespace filter
+} // namespace pose_extrapolator
+} // namespace cartographer

@@ -397,11 +397,11 @@ LocalizationNode::on_activate(const rclcpp_lifecycle::State &state) {
             PosePcCallBack(pose, pc);
         });
     localization_->Initialize();
-    if (not reloc_thread_)
-        reloc_thread_.reset(
-            new std::thread(std::bind(&LocalizationNode::RelocLoop, this)));
-    else
-        LOG(WARNING) << "Reloc Thread already exist";
+    // if (not reloc_thread_)
+    //     reloc_thread_.reset(
+    //         new std::thread(std::bind(&LocalizationNode::RelocLoop, this)));
+    // else
+    //     LOG(WARNING) << "Reloc Thread already exist";
     pose_publisher_->on_activate();
     pc_publisher_->on_activate();
     odom_publisher_->on_activate();
@@ -505,14 +505,6 @@ void LocalizationNode::LaserCallBack(
         points.push_back(transformed_pt);
     }
     sensor::PointCloud pc(time, points);
-    if (localization_->state() == State::RELOCATION) {
-        // Relocate job add
-        {
-            std::unique_lock<std::mutex> lk(job_mutex_);
-            jobs_.push_back(LoopJob());
-            job_condvar_.notify_all();
-        }
-    }
     localization_->AddRangeData(pc);
 }
 
@@ -633,93 +625,6 @@ void LocalizationNode::StopLocationCallback(
     bool success = localization_->Stop();
     LOG(INFO) << "stop localization success";
     response->success = success;
-}
-
-bool LocalizationNode::Request(RelocPose *pose) {
-    auto request =
-        std::make_shared<cyberdog_visions_interfaces::srv::Reloc::Request>();
-    request->reloc_id = reloc_id_;
-    while (!reloc_client_->wait_for_service(1s)) {
-        if (!rclcpp::ok()) {
-            LOG(ERROR) << "Interrupted while waiting for the service, Exiting";
-            return false;
-        }
-        LOG(INFO) << "Service not available, waiting again";
-    }
-    auto result = reloc_client_->async_send_request(request);
-    // auto status = result.wait_for(5s);
-    sleep(5);
-    LOG(INFO) << "wait ended";
-    RelocPose pose_result;
-    if (result.valid()) {
-        auto r_pose = result.get()->pose;
-        Eigen::Quaterniond rotation;
-        rotation.x() = r_pose.pose.orientation.x;
-        rotation.y() = r_pose.pose.orientation.y;
-        rotation.z() = r_pose.pose.orientation.z;
-        rotation.w() = r_pose.pose.orientation.w;
-        Eigen::Vector3d translation;
-        translation.x() = r_pose.pose.position.x;
-        translation.y() = r_pose.pose.position.y;
-        translation.z() = r_pose.pose.position.z;
-        pose_result.pose.Rotation(rotation);
-        pose_result.pose.Translation(translation);
-        pose_result.time = common::Time::max();
-        LOG(INFO) << "get reloc pose" << pose_result.pose.DebugString();
-        *pose = pose_result;
-    } else {
-        LOG(ERROR) << "Failed to get response";
-        return false;
-    }
-    return true;
-}
-
-void LocalizationNode::RelocLoop() {
-    // Reloc loop from vision
-    while (true) {
-        if (not is_on_active_status_) {
-            usleep(1000);
-        } else if (reloc_client_ == nullptr) {
-            if (localization_->state() == State::RELOCATION ||
-                localization_->state() == State::RELOCATING) {
-                RelocPose pose;
-                pose.pose = transform::Rigid3d::Identity();
-                pose.time = common::Time::max();
-                auto reloc_pose = std::make_shared<RelocPose>(pose);
-                localization_->GetInitialPose(reloc_pose);
-                LOG(INFO) << "Go Reloc";
-            } else {
-                usleep(1000);
-            }
-            if (!is_on_active_status_)
-                return;
-        } else {
-            LoopJob job;
-            {
-                std::unique_lock<std::mutex> lk(job_mutex_);
-                while (jobs_.empty() && is_on_active_status_)
-                    job_condvar_.wait(lk);
-
-                if (!is_on_active_status_)
-                    return;
-
-                job = jobs_.front();
-
-                jobs_.pop_front();
-            }
-            if (job.type == LoopJob::INIT_LOCATION) {
-                RelocPose pose_init;
-                bool success = Request(&pose_init);
-                if (success) {
-                    auto reloc_pose = std::make_shared<RelocPose>(pose_init);
-                    localization_->GetInitialPose(reloc_pose);
-                }
-            }
-            if (job.type == LoopJob::NORMAL_LOCATION) {
-                // Norm find constraint by vision
-            }
-        }
-    }
 }
 
 } // namespace laser_slam
