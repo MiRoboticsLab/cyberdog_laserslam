@@ -32,7 +32,7 @@ class BundleAdjustment {
         : param_(param), optimization_problem_(nullptr),
           thread_pool_(thread_pool),
           constraint_builder_(param.constraint_builder_param, thread_pool),
-          work_queue_(nullptr) {
+          work_queue_(nullptr), reloc_work_queue_(nullptr) {
         optimization_problem_ =
             std::make_unique<OptimizationProblem2D>(param.optimization_param);
     }
@@ -53,6 +53,13 @@ class BundleAdjustment {
                    int trajectory_id,
                    const std::vector<std::shared_ptr<const mapping::Submap2D>>
                        &insertion_submaps);
+
+    // Add Relocalization Node from local slam matching result
+    NodeId AddLocalizationNode(
+        std::shared_ptr<const TrajectoryNode::Data> constant_data,
+        int trajectory_id,
+        const std::vector<std::shared_ptr<const mapping::Submap2D>>
+            &insertion_submaps);
 
     // Add first reloc node for connect new nodes to old pose graph
     NodeId AddFirstRelocNode(
@@ -89,6 +96,10 @@ class BundleAdjustment {
 
     bool is_working() { return is_working_; }
 
+    bool is_reloc() { return is_reloc_; }
+
+    bool Stop();
+
   private:
     void RelocConstraintsWorkHandle(const ConstraintBuilder::Result &result);
 
@@ -97,6 +108,11 @@ class BundleAdjustment {
     void TrimSubmap(const SubmapId &id);
 
     WorkItem::Result ComputeConstraintsForNode(
+        const NodeId &node_id,
+        std::vector<std::shared_ptr<const mapping::Submap2D>> insertion_submaps,
+        bool newly_finished_submap) LOCKS_EXCLUDED(pose_graph_mutex_);
+
+    WorkItem::Result ComputeConstraintsForRelocNode(
         const NodeId &node_id,
         std::vector<std::shared_ptr<const mapping::Submap2D>> insertion_submaps,
         bool newly_finished_submap) LOCKS_EXCLUDED(pose_graph_mutex_);
@@ -118,16 +134,33 @@ class BundleAdjustment {
         LOCKS_EXCLUDED(pose_graph_mutex_);
     void DrainWorkQueue() LOCKS_EXCLUDED(pose_graph_mutex_)
         LOCKS_EXCLUDED(work_queue_mutex_);
+
+    void DrainRelocWorkQueue() LOCKS_EXCLUDED(pose_graph_mutex_)
+        LOCKS_EXCLUDED(reloc_work_queue_mutex_);
     // Add Work Item to thread pool
     void AddWorkItem(const std::function<WorkItem::Result()> &work_item)
+        LOCKS_EXCLUDED(pose_graph_mutex_) LOCKS_EXCLUDED(work_queue_mutex_);
+
+    // Add Reloc Work Item to thread pool
+    void AddRelocWorkItem(const std::function<WorkItem::Result()> &work_item)
         LOCKS_EXCLUDED(pose_graph_mutex_) LOCKS_EXCLUDED(work_queue_mutex_);
 
     // Handle Work Queue
     void HandleWorkQueue(const ConstraintBuilder::Result &result)
         LOCKS_EXCLUDED(pose_graph_mutex_) LOCKS_EXCLUDED(work_queue_mutex_);
 
+    // Handle Reloc Work Queue
+    void HandleRelocWorkQueue(const ConstraintBuilder::Result &result)
+        LOCKS_EXCLUDED(pose_graph_mutex_)
+            LOCKS_EXCLUDED(reloc_work_queue_mutex_);
+
     // Compute Constraints between node and submap
     void ComputeConstraint(const NodeId &node_id, const SubmapId &submap_id)
+        LOCKS_EXCLUDED(pose_graph_mutex_);
+
+    // Compute Constraints between reloc node and submap
+    void ComputeRelocConstraint(const NodeId &node_id,
+                                const SubmapId &submap_id)
         LOCKS_EXCLUDED(pose_graph_mutex_);
 
     // Run Optimization
@@ -148,6 +181,9 @@ class BundleAdjustment {
     void WaitForAllComputations() LOCKS_EXCLUDED(pose_graph_mutex_)
         LOCKS_EXCLUDED(work_queue_mutex_);
 
+    void WaitForAllRelocComputations() LOCKS_EXCLUDED(pose_graph_mutex_)
+        LOCKS_EXCLUDED(reloc_work_queue_mutex_);
+
     // Get all submap data under lock
     mapping::MapById<SubmapId, SubmapData> GetSubmapDataUnderLock() const
         EXCLUSIVE_LOCKS_REQUIRED(pose_graph_mutex_);
@@ -161,9 +197,11 @@ class BundleAdjustment {
         EXCLUSIVE_LOCKS_REQUIRED(pose_graph_mutex_);
     int num_nodes_since_last_loop_closure_ = 0;
     bool found_reloc_constraints_ = false;
+    bool is_reloc_ = false;
     bool is_working_ = false;
     mutable absl::Mutex pose_graph_mutex_;
     absl::Mutex work_queue_mutex_;
+    absl::Mutex reloc_work_queue_mutex_;
     absl::Mutex num_reloc_nodes_mutex_;
     std::mutex num_nodes_since_loop_closure_mutex_;
     int num_reloc_nodes_ = 0 GUARDED_BY(num_reloc_nodes_mutex_);
@@ -175,7 +213,10 @@ class BundleAdjustment {
     ConstraintBuilder constraint_builder_; // search constraint
     PoseGraphData data_;                   // all data in pose graph
     std::unique_ptr<WorkQueue> work_queue_ GUARDED_BY(work_queue_mutex_);
+    std::unique_ptr<WorkQueue>
+        reloc_work_queue_ GUARDED_BY(reloc_work_queue_mutex_);
     SubmapCallback submap_callback_;
+    mapping::MapById<NodeId, transform::Rigid3d> vision_id_pose_;
 };
 typedef std::shared_ptr<BundleAdjustment> BundleAdjustmentPtr;
 typedef std::shared_ptr<const BundleAdjustment> BundleAdjustmentConstPtr;

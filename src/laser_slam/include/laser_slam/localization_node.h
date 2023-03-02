@@ -67,8 +67,6 @@ class LocalizationNode : public nav2_util::LifecycleNode {
 
   void LaserCallBack(const sensor_msgs::msg::LaserScan::SharedPtr laser);
 
-  void RelocLoop();
-
   void PosePcCallBack(const transform::Rigid3d& pose,
                       const sensor::RangeData& pc);
 
@@ -79,8 +77,6 @@ class LocalizationNode : public nav2_util::LifecycleNode {
   void StopLocationCallback(
       const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
       std::shared_ptr<std_srvs::srv::SetBool::Response> response);
-
-  bool Request(RelocPose* pose);
 
   bool is_on_active_status_ = false;
   int reloc_id_;

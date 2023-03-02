@@ -195,55 +195,6 @@ ament_target_dependencies(demo_front_end
   "protos"
 )
 
-add_executable(demo demo_front_end/localization_demo.cc)
-target_link_libraries(demo glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} ${PCL_LIBRARIES}
-  absl::algorithm
-  absl::base
-  absl::debugging
-  absl::flat_hash_map
-  absl::memory
-  absl::meta
-  absl::numeric
-  absl::str_format
-  absl::strings
-  absl::synchronization
-  absl::time
-  absl::utility
-
-  # ${_REFLECTION}
-  # ${_GRPC_GRPCPP}
-  ${_PROTOBUF_LIBPROTOBUF}
-  ${Boost_LIBRARIES})
-
-message("!!!!!!!!!!!!!!!!!!")
-message("${Boost_LIBRARIES}")
-message("${BOOST_INCLUDE_DIRS}")
-message("!!!!!!!!!!!!!!!!!!")
-
-ament_target_dependencies(demo
-  "rclcpp"
-  "std_msgs"
-  "sensor_msgs"
-  "nav_msgs"
-  "nav2_util"
-  "geometry_msgs"
-  "tf2"
-  "laser_geometry"
-  "cyberdog_visions_interfaces"
-  "visualization"
-  "Protobuf"
-  "Boost"
-  "pose_graph"
-  "common"
-  "sensor"
-  "transform"
-  "pose_extrapolator"
-  "range_data_matching"
-  "protos"
-  "tf2"
-  "tf2_ros"
-)
-
 add_executable(deserializer src/test_pose_graph_reader.cc)
 target_link_libraries(deserializer glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} ${PCL_LIBRARIES}
   absl::algorithm
@@ -433,10 +384,6 @@ install(TARGETS
 
 install(TARGETS
   pose_graph
-  DESTINATION lib/${PROJECT_NAME})
-
-install(TARGETS
-  demo
   DESTINATION lib/${PROJECT_NAME})
 
 install(TARGETS
