@@ -78,13 +78,22 @@ void ImuTracker::AddImuLinearAccelerationObservation(
             : std::numeric_limits<double>::infinity();
     last_linear_acceleration_time_ = time_;
     const double alpha = 1. - std::exp(-delta_t / imu_gravity_time_constant_);
+    auto gravity_vector_bk = gravity_vector_;
     gravity_vector_ =
         (1. - alpha) * gravity_vector_ + alpha * imu_linear_acceleration;
     // Change the 'orientation_' so that it agrees with the current
     // 'gravity_vector_'.
     const Eigen::Quaterniond rotation = FromTwoVectors(
         gravity_vector_, orientation_.conjugate() * Eigen::Vector3d::UnitZ());
+    auto orientation_bk = orientation_;
     orientation_ = (orientation_ * rotation).normalized();
+    // sometimes happen
+    if (std::isnan((orientation_ * gravity_vector_).z())) {
+        orientation_ = orientation_bk;
+        gravity_vector_ = gravity_vector_bk;
+        LOG(WARNING) << "Orientation become nan!!!!!!!";
+        return;
+    }
     CHECK_GT((orientation_ * gravity_vector_).z(), 0.);
     CHECK_GT((orientation_ * gravity_vector_).normalized().z(), 0.99);
 }
