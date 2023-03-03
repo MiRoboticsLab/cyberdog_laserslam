@@ -443,6 +443,11 @@ void BundleAdjustment::DrainWorkQueue() {
         });
 }
 
+bool BundleAdjustment::LoopVerify(const optimization::Constraint &constraint) {
+    // Verify loop
+
+}
+
 void BundleAdjustment::HandleRelocWorkQueue(
     const ConstraintBuilder::Result &result) {
     LOG(INFO) << "Reloc result in: " << result.size();

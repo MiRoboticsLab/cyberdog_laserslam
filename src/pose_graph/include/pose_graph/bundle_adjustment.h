@@ -101,6 +101,8 @@ class BundleAdjustment {
     bool Stop();
 
   private:
+    bool LoopVerify(const optimization::Constraint &constraint);
+
     void RelocConstraintsWorkHandle(const ConstraintBuilder::Result &result);
 
     bool ComputeRelocConstraintsForNode(const NodeId &node_id);
