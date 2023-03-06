@@ -451,7 +451,8 @@ void LocalizationNode::ImuCallBack(const sensor_msgs::msg::Imu::SharedPtr imu) {
                                common::kUtsEpochOffsetFromUnixEpochInSeconds) *
                                   10000000ll +
                               (imu->header.stamp.nanosec + 50) / 100);
-    localization_->AddImuData(imu_meas);
+    if (is_on_active_status_)
+        localization_->AddImuData(imu_meas);
 }
 
 void LocalizationNode::OdomCallback(
@@ -472,7 +473,8 @@ void LocalizationNode::OdomCallback(
                                common::kUtsEpochOffsetFromUnixEpochInSeconds) *
                                   10000000ll +
                               (odom->header.stamp.nanosec + 50) / 100);
-    localization_->AddOdometryData(odom_meas);
+    if (is_on_active_status_)
+        localization_->AddOdometryData(odom_meas);
 }
 
 void LocalizationNode::LaserCallBack(
@@ -505,7 +507,8 @@ void LocalizationNode::LaserCallBack(
         points.push_back(transformed_pt);
     }
     sensor::PointCloud pc(time, points);
-    localization_->AddRangeData(pc);
+    if (is_on_active_status_)
+        localization_->AddRangeData(pc);
 }
 
 void LocalizationNode::PosePcCallBack(const transform::Rigid3d &pose,

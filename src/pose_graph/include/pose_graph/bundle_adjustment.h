@@ -100,6 +100,10 @@ class BundleAdjustment {
 
     bool Stop();
 
+    int GetFinishedNodesNum() {
+        return constraint_builder_.GetNumFinishedNodes();
+    }
+
   private:
     bool LoopVerify(const optimization::Constraint &constraint);
 
@@ -201,6 +205,7 @@ class BundleAdjustment {
     bool found_reloc_constraints_ = false;
     bool is_reloc_ = false;
     bool is_working_ = false;
+    bool localization_mode_ = false;
     mutable absl::Mutex pose_graph_mutex_;
     absl::Mutex work_queue_mutex_;
     absl::Mutex reloc_work_queue_mutex_;
