@@ -269,8 +269,7 @@ MapBuildNode::on_configure(const rclcpp_lifecycle::State &state) {
     pose_publisher_ =
         create_publisher<geometry_msgs::msg::PoseStamped>("laser_pose", 10);
     map_publisher_ = create_publisher<nav_msgs::msg::OccupancyGrid>(
-        "map",
-        rclcpp::QoS(rclcpp::KeepLast(1)).reliable().durability_volatile());
+        "map", rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local());
 
     // data subscriber
     callback_imu_subscriber_ = this->create_callback_group(
