@@ -596,7 +596,8 @@ void MapBuildNode::ImuCallBack(const sensor_msgs::msg::Imu::SharedPtr imu) {
                                common::kUtsEpochOffsetFromUnixEpochInSeconds) *
                                   10000000ll +
                               (imu->header.stamp.nanosec + 50) / 100);
-    local_slam_->AddImuData(imu_meas);
+    if (is_on_active_status_)
+        local_slam_->AddImuData(imu_meas);
 }
 
 void MapBuildNode::OdomCallback(const nav_msgs::msg::Odometry::SharedPtr odom) {
@@ -616,7 +617,8 @@ void MapBuildNode::OdomCallback(const nav_msgs::msg::Odometry::SharedPtr odom) {
                                common::kUtsEpochOffsetFromUnixEpochInSeconds) *
                                   10000000ll +
                               (odom->header.stamp.nanosec + 50) / 100);
-    local_slam_->AddOdometryData(odom_meas);
+    if (is_on_active_status_)
+        local_slam_->AddOdometryData(odom_meas);
 }
 
 void MapBuildNode::LaserCallBack(
@@ -650,15 +652,19 @@ void MapBuildNode::LaserCallBack(
         // to_do: transform pt to tracking frame
         points.push_back(transformed_pt);
     }
-    if (local_slam_->LatestPoseExtrapolatorTime() == common::Time::min() ||
-        time < local_slam_->LatestPoseExtrapolatorTime()) {
-        LOG(INFO) << "return cause by time"
-                  << local_slam_->LatestPoseExtrapolatorTime() << "Imu no data";
-        return;
+    if (is_on_active_status_) {
+        if (local_slam_->LatestPoseExtrapolatorTime() == common::Time::min() ||
+            time < local_slam_->LatestPoseExtrapolatorTime()) {
+            LOG(INFO) << "return cause by time"
+                      << local_slam_->LatestPoseExtrapolatorTime()
+                      << "Imu no data";
+            return;
+        }
     }
     sensor::PointCloud pc(time, points);
-    std::unique_ptr<MatchingResult> local_matching_result =
-        local_slam_->AddRangeData(pc);
+    std::unique_ptr<MatchingResult> local_matching_result = nullptr;
+    if (is_on_active_status_)
+        local_matching_result = local_slam_->AddRangeData(pc);
     if (local_matching_result != nullptr) {
         if (local_matching_result->insertion_result != nullptr) {
             const auto node =
