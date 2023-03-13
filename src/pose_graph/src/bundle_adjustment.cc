@@ -443,6 +443,54 @@ void BundleAdjustment::DrainWorkQueue() {
         });
 }
 
+// Only use it in localization mode
+bool BundleAdjustment::LoopVerify(const optimization::Constraint &constraint) {
+    // Verify loop
+    // 1. verify the pose is in map
+    auto submap_local_pose =
+        data_.submap_data.at(constraint.submap_id).submap->local_pose();
+    auto transformed_pose = constraint.pose.zbar_ij;
+    auto matched_pose = transformed_pose * submap_local_pose;
+    bool contain = false;
+    Eigen::Vector2f point;
+    point.x() = matched_pose.translation().cast<float>().x();
+    point.y() = matched_pose.translation().cast<float>().y();
+    for (const auto &submap_id_data : data_.submap_data) {
+        InternalTrajectoryState state =
+            data_.trajectories_state[submap_id_data.id.trajectory_id];
+        auto submap = data_.submap_data.at(submap_id_data.id).submap;
+        if (state.state == TrajectoryState::FROZEN) {
+            auto cell_index = submap->grid()->limits().GetCellIndex(point);
+            if (submap->grid()->limits().Contains(cell_index)) {
+                contain = true;
+                break;
+            }
+            // if(not
+            // data_.submap_data.at(submap_id_data.id).submap->grid()->limits().Contains
+        }
+    }
+    if (not contain)
+        return false;
+    // 2. verify global pose comparing
+    if (is_reloc_) {
+        auto global_pose =
+            data_.trajectory_nodes.at(constraint.node_id).global_pose;
+        LOG(INFO) << "Global Pose of node: " << global_pose.DebugString()
+                  << " constraint matched pose is: "
+                  << matched_pose.DebugString();
+        auto diff = global_pose * matched_pose.inverse();
+        auto diff_dis = diff.translation().norm();
+        auto diff_angle = diff.rotation().norm();
+        if (diff_dis > 0.8) {
+            LOG(WARNING) << "Error Loop Constraint";
+            return false;
+        }
+        LOG(INFO) << "Diff distance is: " << diff_dis
+                  << " Diff angle is: " << diff_angle;
+    }
+    return true;
+}
+
 void BundleAdjustment::HandleRelocWorkQueue(
     const ConstraintBuilder::Result &result) {
     LOG(INFO) << "Reloc result in: " << result.size();
@@ -503,14 +551,27 @@ void BundleAdjustment::HandleRelocWorkQueue(
             }
         } else {
             // insert constraint directly, run optimiation
-            {
-                absl::MutexLock locker(&pose_graph_mutex_);
-                data_.constraints.insert(data_.constraints.end(),
-                                         result.begin(), result.end());
+            ConstraintBuilder::Result reserved_constraints;
+            for (auto &constraint : result) {
+                bool is_good = LoopVerify(constraint);
+                if (is_good) {
+                    LOG(INFO) << "Is a good constraint";
+                    reserved_constraints.push_back(constraint);
+                } else {
+                    LOG(INFO) << "Not a good constraint";
+                }
             }
-            RunOptimization();
-            is_reloc_ = true;
-            constraint_builder_.SetIsReloc();
+            if (not reserved_constraints.empty()) {
+                {
+                    absl::MutexLock locker(&pose_graph_mutex_);
+                    data_.constraints.insert(data_.constraints.end(),
+                                             reserved_constraints.begin(),
+                                             reserved_constraints.end());
+                }
+                RunOptimization();
+                is_reloc_ = true;
+                constraint_builder_.SetIsReloc();
+            }
         }
     }
     DrainRelocWorkQueue();
@@ -518,7 +579,24 @@ void BundleAdjustment::HandleRelocWorkQueue(
 
 void BundleAdjustment::HandleWorkQueue(
     const ConstraintBuilder::Result &result) {
-    {
+    if (param_.localization_mode) {
+        ConstraintBuilder::Result reserved_constraint;
+        for (auto &constraint : result) {
+            bool is_good = LoopVerify(constraint);
+            if (is_good) {
+                LOG(INFO) << "Is a good constraint";
+                reserved_constraint.push_back(constraint);
+            } else {
+                LOG(INFO) << "Not a good constraint";
+            }
+        }
+        if (not reserved_constraint.empty()) {
+            absl::MutexLock locker(&pose_graph_mutex_);
+            data_.constraints.insert(data_.constraints.end(),
+                                     reserved_constraint.begin(),
+                                     reserved_constraint.end());
+        }
+    } else {
         absl::MutexLock locker(&pose_graph_mutex_);
         data_.constraints.insert(data_.constraints.end(), result.begin(),
                                  result.end());

@@ -259,6 +259,7 @@ MapBuildNode::on_configure(const rclcpp_lifecycle::State &state) {
     this->declare_parameter("pose_graph_param.max_submaps_maintain");
     this->get_parameter("pose_graph_param.max_submaps_maintain",
                         pose_graph_param.max_submaps_maintain);
+    pose_graph_param.localization_mode = false;
     pose_graph_param_ = pose_graph_param;
     pose_graph_.reset(new pose_graph::optimization::BundleAdjustment(
         pose_graph_param, &thread_pool_));
@@ -663,6 +664,7 @@ void MapBuildNode::LaserCallBack(
     }
     sensor::PointCloud pc(time, points);
     std::unique_ptr<MatchingResult> local_matching_result = nullptr;
+
     if (is_on_active_status_)
         local_matching_result = local_slam_->AddRangeData(pc);
     if (local_matching_result != nullptr) {
@@ -672,6 +674,7 @@ void MapBuildNode::LaserCallBack(
             const auto submaps =
                 local_matching_result->insertion_result->insertion_submaps;
             mapping::NodeId node_id = pose_graph_->AddNode(node, 0, submaps);
+            ++inserted_node_num_;
             id_data_[node_id] = local_matching_result->range_data_in_local;
             display_ptr_->AddSubmap(id_, submaps[0]);
             if (submaps[0]->insertion_finished()) {
@@ -757,6 +760,7 @@ void MapBuildNode::LaserCallBack(
         pub_pc.header.frame_id = frame_id_;
         pc_publisher_->publish(pub_pc);
     }
+    in_laser_process_ = false;
 }
 
 bool MapBuildNode::CheckDirectory(const std::string &path) {

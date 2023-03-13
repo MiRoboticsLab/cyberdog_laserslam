@@ -148,6 +148,8 @@ struct PoseGraph2DParam {
     int optimize_every_n_nodes;
     int max_num_final_iterations;
     int max_submaps_maintain;
+    double constraint_distance_threshold;
+    double constraint_rpy_threshold;
     bool need_vision_verify;
     bool localization_mode;
     OptimizationParam optimization_param;
