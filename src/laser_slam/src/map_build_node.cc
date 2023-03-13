@@ -270,7 +270,7 @@ MapBuildNode::on_configure(const rclcpp_lifecycle::State &state) {
     pose_publisher_ =
         create_publisher<geometry_msgs::msg::PoseStamped>("laser_pose", 10);
     map_publisher_ = create_publisher<nav_msgs::msg::OccupancyGrid>(
-        "map", rclcpp::QoS(rclcpp::KeepLast(1)).transient_local());
+        "map", rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local());
 
     // data subscriber
     callback_imu_subscriber_ = this->create_callback_group(
@@ -453,14 +453,6 @@ MapBuildNode::on_shutdown(const rclcpp_lifecycle::State &state) {
 bool MapBuildNode::SaveMap(bool save_map, const std::string &map_name) {
     //   map_display_->QuitThread();
     display_ptr_->QuitThread();
-    while (in_laser_process_) {
-        LOG(INFO) << "Laser Processing";
-        usleep(1000);
-    }
-    // while (pose_graph_->GetFinishedNodesNum() != inserted_node_num_) {
-    //     usleep(1000);
-    //     LOG(INFO) << "Thread Pool still have task";
-    // }
     pose_graph_->RunFinalOptimization();
     if (save_map) {
         bool suc = CheckDirectory(map_save_path_);
@@ -634,7 +626,6 @@ void MapBuildNode::LaserCallBack(
     const sensor_msgs::msg::LaserScan::SharedPtr laser) {
     if (not is_on_active_status_)
         return;
-    in_laser_process_ = true;
     std::vector<sensor::RangefinderPoint> points;
     sensor_msgs::msg::PointCloud2 cloud;
     common::Time time =
