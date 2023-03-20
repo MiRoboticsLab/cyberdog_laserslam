@@ -62,11 +62,6 @@ def generate_launch_description():
             'autostart', default_value='true',
             description='Automatically startup the nav2 stack'),
 
-       # DeclareLaunchArgument(
-       #     'params_file',
-       #     default_value=os.path.join(package_dir, 'params', 'params.yaml'),
-       #    description='Full path to the ROS2 parameters file to use'),
-        
         Node(
             package='nav2_map_server',
             executable='map_server',
@@ -85,4 +80,3 @@ def generate_launch_description():
                         {'autostart': autostart},
                         {'node_names': lifecycle_nodes}])
     ])
-

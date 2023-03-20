@@ -1,5 +1,7 @@
 #!/usr/bin/python3
-# Copyright 2020, EAIBOT
+#
+# Copyright (c) 2023 Xiaomi Corporation
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,30 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from http.server import executable
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
 from launch_ros.actions import LifecycleNode
-from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
-from launch.actions import LogInfo
 from nav2_common.launch import RewrittenYaml
 
-import lifecycle_msgs.msg
 import os
 
 
 def generate_launch_description():
     share_dir = get_package_share_directory('laser_slam')
     localization_parameter_file = LaunchConfiguration('localization_params_file')
-    namespace = LaunchConfiguration('namespace',default='')
+    namespace = LaunchConfiguration('namespace', default='')
     imu_topic = LaunchConfiguration('imu_topic')
     param_substitutions = {
         'imu_topic': imu_topic
     }
-    
+
     localization_configured_params = RewrittenYaml(
             source_file=localization_parameter_file,
             root_key=namespace,
@@ -43,9 +41,9 @@ def generate_launch_description():
             convert_types=True)
 
     localization_params_declare = DeclareLaunchArgument('localization_params_file',
-                                           default_value=os.path.join(
-                                               share_dir, 'param', 'localization.yaml'),
-                                           description='FPath to the ROS2 parameters file to use.')
+                                                        default_value=os.path.join(
+                                                         share_dir, 'param', 'localization.yaml'),
+                                                        description='Path to Ros Parameter')
 
     rew_loc = DeclareLaunchArgument(
             'imu_topic', default_value='/camera/imu',
@@ -56,7 +54,6 @@ def generate_launch_description():
                                 name='localization_node',
                                 output='screen',
                                 emulate_tty=True,
-                                #prefix=['xterm -e gdb  --args'],
                                 parameters=[localization_configured_params],
                                 namespace=namespace,
                                 )
