@@ -1,5 +1,7 @@
 #!/usr/bin/python3
-# Copyright 2020, EAIBOT
+#
+# Copyright (c) 2023 Xiaomi Corporation
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,17 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from http.server import executable
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
 from launch_ros.actions import LifecycleNode
-from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
-from launch.actions import LogInfo
 
-import lifecycle_msgs.msg
 import os
 
 

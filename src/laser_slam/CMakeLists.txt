@@ -16,7 +16,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-SET(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
 find_package(ament_cmake REQUIRED)
@@ -83,18 +83,18 @@ link_directories(${EIGEN_LIBRARY_DIRS}
   glog
   /usr/local/lib)
 
-add_library(${PROJECT_NAME} src/grid_for_navigation.cc
-  src/final_map_generator.cc
-  src/local_slam.cc
-  src/back_end.cc
-  src/map_builder.cc
-  src/map_loader.cc
-  src/localization.cc
-  src/pose_recorder.cc
-  src/submap_points_batch.cc
-  src/map_build_node.cc
-  src/localization_node.cc
-  src/grid_for_display.cc)
+add_library(${PROJECT_NAME} src/grid_for_navigation.cpp
+  src/final_map_generator.cpp
+  src/local_slam.cpp
+  src/back_end.cpp
+  src/map_builder.cpp
+  src/map_loader.cpp
+  src/localization.cpp
+  src/pose_recorder.cpp
+  src/submap_points_batch.cpp
+  src/map_build_node.cpp
+  src/localization_node.cpp
+  src/grid_for_display.cpp)
 
 ament_target_dependencies(${PROJECT_NAME}
   "rclcpp"
@@ -114,47 +114,7 @@ ament_target_dependencies(${PROJECT_NAME}
   "Protobuf"
 )
 
-add_executable(local_slam_test_node src/local_slam_test_node.cc)
-target_link_libraries(local_slam_test_node glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} ${PCL_LIBRARIES}
-  absl::algorithm
-  absl::base
-  absl::debugging
-  absl::flat_hash_map
-  absl::memory
-  absl::meta
-  absl::numeric
-  absl::str_format
-  absl::strings
-  absl::synchronization
-  absl::time
-  absl::utility
-
-  # ${_REFLECTION}
-  # ${_GRPC_GRPCPP}
-  ${_PROTOBUF_LIBPROTOBUF})
-
-ament_target_dependencies(local_slam_test_node
-  "rclcpp"
-  "std_msgs"
-  "sensor_msgs"
-  "nav_msgs"
-  "nav2_util"
-  "geometry_msgs"
-  "visualization"
-  "tf2"
-  "laser_geometry"
-  "Protobuf"
-  "pose_graph"
-  "common"
-  "protos"
-  "sensor"
-  "transform"
-  "pose_extrapolator"
-  "range_data_matching"
-  "pcl_msgs"
-)
-
-add_executable(demo_front_end demo_front_end/front_end_demo.cc)
+add_executable(demo_front_end demo_front_end/front_end_demo.cpp)
 target_link_libraries(demo_front_end glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} ${PCL_LIBRARIES}
   absl::algorithm
   absl::base
@@ -195,7 +155,7 @@ ament_target_dependencies(demo_front_end
   "protos"
 )
 
-add_executable(deserializer src/test_pose_graph_reader.cc)
+add_executable(deserializer src/test_pose_graph_reader.cpp)
 target_link_libraries(deserializer glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} ${PCL_LIBRARIES}
   absl::algorithm
   absl::base
@@ -235,7 +195,7 @@ ament_target_dependencies(deserializer
   "protos"
 )
 
-add_executable(pose_graph demo_front_end/demo_with_pose_graph.cc)
+add_executable(pose_graph demo_front_end/demo_with_pose_graph.cpp)
 target_link_libraries(pose_graph glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} ${PCL_LIBRARIES}
   absl::algorithm
   absl::base
@@ -273,7 +233,7 @@ ament_target_dependencies(pose_graph
   "protos"
 )
 
-add_executable(mapping demo_front_end/mapping_node.cc)
+add_executable(mapping demo_front_end/mapping_node.cpp)
 target_link_libraries(mapping glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} ${PCL_LIBRARIES}
   absl::algorithm
   absl::base
@@ -314,7 +274,7 @@ ament_target_dependencies(mapping
   "pcl_msgs"
 )
 
-add_executable(localization demo_front_end/localization_programmer.cc)
+add_executable(localization demo_front_end/localization_programmer.cpp)
 target_link_libraries(localization glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} ${PCL_LIBRARIES}
   absl::algorithm
   absl::base
