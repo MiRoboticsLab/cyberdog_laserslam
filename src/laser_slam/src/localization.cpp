@@ -115,13 +115,14 @@ void Localization::AddRangeData(const sensor::PointCloud & timed_point_cloud)
       "No Inertial Data or imu data timestamp faster than laser";
     return;
   }
+  in_laser_process_ = true;
 
   // transform::Rigid3d optimized_pose;
   // std::unique_ptr<MatchingResult> matching_result;
   auto matching_result = local_slam_->AddRangeData(timed_point_cloud);
   sensor::RangeData range_data_callback;
   transform::Rigid3d pose_to_cb;
-  if (matching_result != nullptr) {
+  if (matching_result != nullptr && start_) {
     if (matching_result->insertion_result != nullptr) {
       pose_graph_->AddLocalizationNode(
         matching_result->insertion_result->node_constant_data,
@@ -141,6 +142,7 @@ void Localization::AddRangeData(const sensor::PointCloud & timed_point_cloud)
       pose_pc_callback_(pose_to_cb, range_data_callback);
     }
   }
+  in_laser_process_ = false;
 }
 
 void Localization::AddImuData(const sensor::ImuData & imu_data)
