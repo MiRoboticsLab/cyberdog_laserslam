@@ -110,6 +110,7 @@ private:
   bool is_reloc_;
   bool start_;
   bool inertial_comming_ = false;
+  bool in_laser_process_ = false;
   State state_;
   std::mutex reloc_pose_mutex_;
   std::mutex is_reloc_mutex_;

@@ -465,6 +465,10 @@ MapBuildNode::on_activate(const rclcpp_lifecycle::State & state)
 nav2_util::CallbackReturn
 MapBuildNode::on_deactivate(const rclcpp_lifecycle::State & state)
 {
+  while(in_laser_process_) {
+    LOG(INFO) << "Laser Still Have Task";
+    usleep(1000);
+  }
   pc_publisher_->on_deactivate();
   pose_publisher_->on_deactivate();
   map_publisher_->on_deactivate();
@@ -695,6 +699,7 @@ void MapBuildNode::LaserCallBack(
   if (!is_on_active_status_) {
     return;
   }
+  in_laser_process_ = true;
   std::vector<sensor::RangefinderPoint> points;
   sensor_msgs::msg::PointCloud2 cloud;
   common::Time time =
@@ -739,7 +744,7 @@ void MapBuildNode::LaserCallBack(
   if (is_on_active_status_) {
     local_matching_result = local_slam_->AddRangeData(pc);
   }
-  if (local_matching_result != nullptr) {
+  if (local_matching_result != nullptr && is_on_active_status_) {
     if (local_matching_result->insertion_result != nullptr) {
       const auto node =
         local_matching_result->insertion_result->node_constant_data;
