@@ -36,6 +36,10 @@ Localization::~Localization() {}
 bool Localization::Stop()
 {
   start_ = false;
+  while(in_laser_process_) {
+    LOG(INFO) << "Laser Still Have Task";
+    usleep(1000);
+  }
   bool result = pose_graph_->Stop();
   if (reloc_publisher_thread_ && reloc_publisher_thread_->joinable()) {
     reloc_publisher_thread_->join();
