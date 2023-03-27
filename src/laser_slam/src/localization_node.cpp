@@ -302,6 +302,8 @@ LocalizationNode::on_configure(const rclcpp_lifecycle::State & state)
     pose_graph_param.max_submaps_maintain);
   LOG(INFO) << "max submap maintain is: " <<
     pose_graph_param.max_submaps_maintain;
+  pose_graph_param.need_vision_verify = false;
+  LOG(INFO) << "No vision verify need";
 
   LocalizationParam localization_param;
   localization_param.local_slam_param = param;
