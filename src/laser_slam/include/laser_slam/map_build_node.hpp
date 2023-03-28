@@ -27,6 +27,7 @@
 #include "laser_slam/base_data/submap_points_batch.hpp"
 #include "laser_slam/final_map_generator.hpp"
 #include "laser_slam/local_slam.hpp"
+#include "laser_slam/map_server_node.hpp"
 #include "pose_graph/bundle_adjustment.h"
 #include "protos/proto_stream.h"
 #include "protos/proto_stream_interface.h"
@@ -143,8 +144,10 @@ private:
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr map_name_client_;
   rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr start_map_notify_client_;
   rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr stop_map_notify_client_;
+  rclcpp::TimerBase::SharedPtr grid_publish_timer_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   GridForDisplayPtr display_ptr_;
+  std::shared_ptr<MapServerNode> mapping_ptr_;
   mapping::SubmapId id_;
 };
 }  // namespace laser_slam
