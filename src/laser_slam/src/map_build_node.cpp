@@ -26,7 +26,7 @@ MapBuildNode::MapBuildNode(int thread_num)
   is_multi_map_mode_(false), is_map_name_got_(false), save_map_(false),
   map_publish_period_sec_(0.0), last_laser_time_(0), frame_id_(""),
   local_slam_(nullptr), thread_pool_(thread_num), pose_graph_(nullptr),
-  pose_recorder_(nullptr), grid_(nullptr), id_{0, 0} {}
+  pose_recorder_(nullptr), grid_(nullptr), mapping_ptr_(nullptr),id_{0, 0} {}
 
 MapBuildNode::~MapBuildNode() {}
 
@@ -421,6 +421,9 @@ MapBuildNode::on_configure(const rclcpp_lifecycle::State & state)
 
   this->declare_parameter("is_multi_map_mode");
   this->get_parameter("is_multi_map_mode", is_multi_map_mode_);
+
+  mapping_ptr_.reset(new MapServerNode());
+
   // if is multi map mode, need communicate with miloc
   if (is_multi_map_mode_) {
     std::string map_name_service_name = "get_map_path";
@@ -445,8 +448,6 @@ MapBuildNode::on_configure(const rclcpp_lifecycle::State & state)
     stop_map_notify_client_ = this->create_client<std_srvs::srv::SetBool>(
       stop_mapping_notify_name);
   }
-  display_ptr_.reset(new GridForDisplay());
-  display_ptr_->SetMapPublisher(map_publisher_);
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
@@ -456,8 +457,7 @@ MapBuildNode::on_activate(const rclcpp_lifecycle::State & state)
   pc_publisher_->on_activate();
   pose_publisher_->on_activate();
   map_publisher_->on_activate();
-  //   map_display_->StartThread();
-  display_ptr_->StartThread();
+  mapping_ptr_->StartThread();
   createBond();
   return nav2_util::CallbackReturn::SUCCESS;
 }
@@ -480,8 +480,7 @@ MapBuildNode::on_deactivate(const rclcpp_lifecycle::State & state)
   grid_.reset(
     new GridForNavigation(
       0.05, local_slam_param_.submap_param.probability_insert_param));
-  display_ptr_.reset(new GridForDisplay());
-  display_ptr_->SetMapPublisher(map_publisher_);
+  mapping_ptr_.reset(new MapServerNode());
   LOG(INFO) << "deactive success";
   destroyBond();
   return nav2_util::CallbackReturn::SUCCESS;
@@ -493,7 +492,6 @@ MapBuildNode::on_cleanup(const rclcpp_lifecycle::State & state)
   pose_graph_.reset();
   pose_recorder_.reset();
   grid_.reset();
-  display_ptr_.reset();
   is_on_active_status_ = false;
   return nav2_util::CallbackReturn::SUCCESS;
 }
@@ -505,11 +503,16 @@ MapBuildNode::on_shutdown(const rclcpp_lifecycle::State & state)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
+void MapBuildNode::DisplayMapPublishPeriod() {
+  auto grid = mapping_ptr_->grid();
+  grid.header.frame_id = "laser_odom";
+  map_publisher_->publish(grid);
+}
+
 bool MapBuildNode::SaveMap(bool save_map, const std::string & map_name)
 {
-  //   map_display_->QuitThread();
-  display_ptr_->QuitThread();
   pose_graph_->RunFinalOptimization();
+  mapping_ptr_->StopThread();
   if (save_map) {
     bool suc = CheckDirectory(map_save_path_);
     if (!suc) {
@@ -579,6 +582,7 @@ void MapBuildNode::StartMappingCallback(
     return;
   }
   is_on_active_status_ = request->data;
+  grid_publish_timer_ = create_wall_timer(500ms, std::bind(&MapBuildNode::DisplayMapPublishPeriod, this));
   if (is_multi_map_mode_) {
     auto req = std::make_shared<std_srvs::srv::SetBool::Request>();
     req.get()->data = false;
@@ -745,6 +749,9 @@ void MapBuildNode::LaserCallBack(
     local_matching_result = local_slam_->AddRangeData(pc);
   }
   if (local_matching_result != nullptr && is_on_active_status_) {
+    auto range = local_matching_result->range_data_in_local;
+    auto po = local_matching_result->local_pose;
+    mapping_ptr_->AddRangeDataAndPose(range, po);
     if (local_matching_result->insertion_result != nullptr) {
       const auto node =
         local_matching_result->insertion_result->node_constant_data;
@@ -753,7 +760,6 @@ void MapBuildNode::LaserCallBack(
       mapping::NodeId node_id = pose_graph_->AddNode(node, 0, submaps);
       ++inserted_node_num_;
       id_data_[node_id] = local_matching_result->range_data_in_local;
-      display_ptr_->AddSubmap(id_, submaps[0]);
       if (submaps[0]->insertion_finished()) {
         ++id_.submap_index;
       }
