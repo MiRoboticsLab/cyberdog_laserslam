@@ -504,9 +504,11 @@ MapBuildNode::on_shutdown(const rclcpp_lifecycle::State & state)
 }
 
 void MapBuildNode::DisplayMapPublishPeriod() {
-  auto grid = mapping_ptr_->grid();
-  grid.header.frame_id = "laser_odom";
-  map_publisher_->publish(grid);
+  if(is_on_active_status_ && mapping_ptr_ != nullptr) {
+    auto grid = mapping_ptr_->grid();
+    grid.header.frame_id = "laser_odom";
+    map_publisher_->publish(grid);
+  } 
 }
 
 bool MapBuildNode::SaveMap(bool save_map, const std::string & map_name)
@@ -751,7 +753,9 @@ void MapBuildNode::LaserCallBack(
   if (local_matching_result != nullptr && is_on_active_status_) {
     auto range = local_matching_result->range_data_in_local;
     auto po = local_matching_result->local_pose;
-    mapping_ptr_->AddRangeDataAndPose(range, po);
+    if(mapping_ptr_ != nullptr) {
+       mapping_ptr_->AddRangeDataAndPose(range, po);
+    }
     if (local_matching_result->insertion_result != nullptr) {
       const auto node =
         local_matching_result->insertion_result->node_constant_data;

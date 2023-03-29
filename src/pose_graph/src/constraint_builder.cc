@@ -130,6 +130,8 @@ void ConstraintBuilder::ComputeConstraint(
             param_.min_score, &score, &pose_estimated);
     }
     if (not success) {
+        LOG(INFO) << "No Reloc Constraint Found"
+                  << " Which Score is: " << score;
         return;
     }
     ceres::Solver::Summary summary;

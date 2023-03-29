@@ -57,8 +57,8 @@ void MapServerNode::MapGenerateThread() {
     while (!quit_thread_) {
         map_task_end_ = false;
         if (insertion_map_ != nullptr) {
-            if (num_accumulated_range_data_ > 20 || first_update_) {
-                first_update_ = false;
+            if (num_accumulated_range_data_ > 20) {
+                // first_update_ = false;
                 std::unique_ptr<mapping::Submap2D> insertion_map_bk;
                 {
                     std::lock_guard<std::mutex> lk(insertion_map_mtx_);
