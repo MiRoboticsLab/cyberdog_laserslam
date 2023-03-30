@@ -11,12 +11,24 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef POSE_EXTRAPOLATOR_FILTER_FILTER_BASE_H_
-#define POSE_EXTRAPOLATOR_FILTER_FILTER_BASE_H_
-namespace cartographer {
-namespace pose_extrapolator {
-namespace filter {}
-}  // namespace pose_extrapolator
-}  // namespace cartographer
+#pragma once
+#include "sensor/point_cloud.h"
 
-#endif  // POSE_EXTRAPOLATOR_FILTER_FILTER_BASE_H_
+namespace cartographer {
+namespace sensor {
+class FeatureExtractor {
+  public:
+    FeatureExtractor(int num_curve_pts, double threshold)
+        : num_curve_pts_(num_curve_pts), threshold_(threshold) {}
+    virtual ~FeatureExtractor() {}
+
+    PointCloud IsCurvatureEnough(const PointCloud &pc);
+
+  private:
+    int num_curve_pts_;
+    double threshold_;
+};
+typedef std::shared_ptr<FeatureExtractor> FeatureExtractorPtr;
+typedef std::shared_ptr<const FeatureExtractor> FeatureExtractorConstPtr;
+} // namespace sensor
+} // namespace cartographer

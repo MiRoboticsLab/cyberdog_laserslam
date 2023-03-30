@@ -59,38 +59,7 @@ ament_target_dependencies(${PROJECT_NAME}
                           "protos"
                           "Protobuf"
                            )
-                        
-add_executable(transform_test src/transform_proto_test.cc)
-target_link_libraries(transform_test ${PROJECT_NAME} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} 
-absl::algorithm
-absl::base
-absl::debugging
-absl::flat_hash_map
-absl::memory
-absl::meta
-absl::numeric
-absl::str_format
-absl::strings
-absl::synchronization
-absl::time
-absl::utility
-glog
-${Protobuf_LIBRARIES})
 
-ament_target_dependencies(transform_test
-                          "protos"
-                          "Protobuf"
-                           )
-
-		   #add_executable(proto_stream_test test/proto_stream_test.cc)
-		   #target_link_libraries(proto_stream_test gtest gtest_main ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME}  ${Protobuf_LIBRARIES} ${Boost_LIBRARIES} absl::flat_hash_map absl::container absl::any absl::utility glog)
-		   #add_test(NAME proto_stream_test COMMAND proto_stream_test)
-		   #ament_target_dependencies(proto_stream_test
-		   #       "protos"
-		   #       "common"
-		   #       "Protobuf"
-		   #      "Boost"
-		   #      )
 ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(Eigen3 absl common protos)
 install(TARGETS ${PROJECT_NAME}
@@ -107,7 +76,11 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
   # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
+  set(ament_cmake_copyright_FOUND TRUE)
+  set(ament_cmake_cppcheck_FOUND TRUE)
+  set(ament_cmake_cpplint_FOUND TRUE)
+  set(ament_cmake_lint_cmake_FOUND TRUE)
+  set(ament_cmake_uncrustify_FOUND TRUE)
   # the following line skips cpplint (only works in a git repo)
   # uncomment the line when this package is not in a git repo
   #set(ament_cmake_cpplint_FOUND TRUE)

@@ -1,9 +1,16 @@
-/**
- * Copyright (c) 2022 XiaoMi
- *
- * Author: Feixiang Zeng <zengfeixiang@xiaomi.com>
- *
- */
+// Copyright (c) 2023 Beijing Xiaomi Mobile Software Co., Ltd. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 #ifndef RVIZ_DISPLAY_IMAGE_H_
 #define RVIZ_DISPLAY_IMAGE_H_
 #include <array>
@@ -22,14 +29,6 @@ constexpr cairo_format_t kCairoFormat = CAIRO_FORMAT_ARGB32;
 using UniqueCairoSurfacePtr =
     std::unique_ptr<cairo_surface_t, void (*)(cairo_surface_t*)>;
 
-// // Takes ownership.
-// UniqueCairoSurfacePtr MakeUniqueCairoSurfacePtr(cairo_surface_t* surface);
-
-// // std::unique_ptr for Cairo contexts.
-// using UniqueCairoPtr = std::unique_ptr<cairo_t, void (*)(cairo_t*)>;
-
-// // Takes ownership.
-// UniqueCairoPtr MakeUniqueCairoPtr(cairo_t* surface);
 
 using Uint8Color = std::array<uint8, 3>;
 
@@ -49,14 +48,6 @@ class Image {
   int width() const { return width_; }
 
   int height() const { return height_; }
-
-  // void WritePng(FileWriter* const file_writer);
-
-  // Returns a pointer to a cairo surface that contains the current pixel data.
-  // The 'Image' object must therefore outlive the returned surface object. It
-  // is undefined behavior to call any of the mutating functions while a pointer
-  // to this surface is alive.
-  // UniqueCairoSurfacePtr GetCairoSurface();
 
  private:
   int width_;

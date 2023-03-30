@@ -36,12 +36,6 @@ find_package(rviz_display REQUIRED)
 find_package(sensor REQUIRED)
 find_package(absl REQUIRED)
 find_package(pcl_msgs REQUIRED)
-#set(protobuf_MODULE_COMPATIBLE TRUE)
-#find_package(Protobuf CONFIG REQUIRED)
-#set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
 
 include_directories(
   include
@@ -52,7 +46,6 @@ include_directories(
   ${CERES_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
- # ${Protobuf_INCLUDE_DIRS}
   ${common_INCLUDE_DIRS}
   ${rviz_display_INCLUDE_DIRS}
   ${protos_INCLUDE_DIRS}
@@ -85,10 +78,6 @@ ament_target_dependencies(${PROJECT_NAME}
                             "Protobuf"
                             "pcl_msgs"
                             )
-		    #add_executable(optimization_test src/optimization_problem_test.cc)
-		    #target_link_libraries(optimization_test  glog ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME} ${CERES_LIBRARIES} absl::strings)
-		    #add_test(NAME optimization_test COMMAND optimization_test)                           
-
 
 ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(Eigen3 absl common sensor transform range_data_matching pose_extrapolator)
@@ -107,7 +96,11 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
   # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
+  set(ament_cmake_copyright_FOUND TRUE)
+  set(ament_cmake_cppcheck_FOUND TRUE)
+  set(ament_cmake_cpplint_FOUND TRUE)
+  set(ament_cmake_lint_cmake_FOUND TRUE)
+  set(ament_cmake_uncrustify_FOUND TRUE)
   # the following line skips cpplint (only works in a git repo)
   # uncomment the line when this package is not in a git repo
   #set(ament_cmake_cpplint_FOUND TRUE)

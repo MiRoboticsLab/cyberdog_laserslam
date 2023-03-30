@@ -26,7 +26,7 @@ MapBuildNode::MapBuildNode(int thread_num)
   is_multi_map_mode_(false), is_map_name_got_(false), save_map_(false),
   map_publish_period_sec_(0.0), last_laser_time_(0), frame_id_(""),
   local_slam_(nullptr), thread_pool_(thread_num), pose_graph_(nullptr),
-  pose_recorder_(nullptr), grid_(nullptr), mapping_ptr_(nullptr),id_{0, 0} {}
+  pose_recorder_(nullptr), grid_(nullptr), mapping_ptr_(nullptr), id_{0, 0} {}
 
 MapBuildNode::~MapBuildNode() {}
 
@@ -465,7 +465,7 @@ MapBuildNode::on_activate(const rclcpp_lifecycle::State & state)
 nav2_util::CallbackReturn
 MapBuildNode::on_deactivate(const rclcpp_lifecycle::State & state)
 {
-  while(in_laser_process_) {
+  while (in_laser_process_) {
     LOG(INFO) << "Laser Still Have Task";
     usleep(1000);
   }
@@ -503,12 +503,13 @@ MapBuildNode::on_shutdown(const rclcpp_lifecycle::State & state)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
-void MapBuildNode::DisplayMapPublishPeriod() {
-  if(is_on_active_status_ && mapping_ptr_ != nullptr) {
+void MapBuildNode::DisplayMapPublishPeriod()
+{
+  if (is_on_active_status_ && mapping_ptr_ != nullptr) {
     auto grid = mapping_ptr_->grid();
     grid.header.frame_id = "laser_odom";
     map_publisher_->publish(grid);
-  } 
+  }
 }
 
 bool MapBuildNode::SaveMap(bool save_map, const std::string & map_name)
@@ -584,7 +585,8 @@ void MapBuildNode::StartMappingCallback(
     return;
   }
   is_on_active_status_ = request->data;
-  grid_publish_timer_ = create_wall_timer(500ms, std::bind(&MapBuildNode::DisplayMapPublishPeriod, this));
+  grid_publish_timer_ =
+    create_wall_timer(500ms, std::bind(&MapBuildNode::DisplayMapPublishPeriod, this));
   if (is_multi_map_mode_) {
     auto req = std::make_shared<std_srvs::srv::SetBool::Request>();
     req.get()->data = false;
@@ -753,8 +755,8 @@ void MapBuildNode::LaserCallBack(
   if (local_matching_result != nullptr && is_on_active_status_) {
     auto range = local_matching_result->range_data_in_local;
     auto po = local_matching_result->local_pose;
-    if(mapping_ptr_ != nullptr) {
-       mapping_ptr_->AddRangeDataAndPose(range, po);
+    if (mapping_ptr_ != nullptr) {
+      mapping_ptr_->AddRangeDataAndPose(range, po);
     }
     if (local_matching_result->insertion_result != nullptr) {
       const auto node =
