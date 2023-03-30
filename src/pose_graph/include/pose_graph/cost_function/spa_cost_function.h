@@ -17,7 +17,11 @@
 #define POSE_GRAPH_COST_FUNCTION_SPA_COST_FUNCTION_H_
 #include <ceres/ceres.h>
 
-#include "pose_graph/optimization_problem/pose_graph_components.h"
+#include "range_data_matching/map/id.h"
+#include "transform/transform.h"
+#include "transform/rigid_transform.h"
+#include "range_data_matching/map/submaps.h"
+#include "pose_graph/data_set/pose_graph_data.h"
 
 namespace cartographer {
 namespace pose_graph {
