@@ -36,7 +36,7 @@ Localization::~Localization() {}
 bool Localization::Stop()
 {
   start_ = false;
-  while(in_laser_process_) {
+  while (in_laser_process_) {
     LOG(INFO) << "Laser Still Have Task";
     usleep(1000);
   }

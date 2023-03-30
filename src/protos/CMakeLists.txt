@@ -83,35 +83,8 @@ foreach(msg ${MSG_PROTOS})
           VERBATIM
         )
 endforeach()
-#set(GRPC_GENERATOR_PLUGIN /usr/local/bin/grpc_cpp_plugin)
 
-#set(MESSAGE_GRPC_SRC "")
-#set(MESSAGE_GRPC_HDRS "")
-#file(GLOB_RECURSE MSG_GRPC_PROTOS ${CMAKE_SOURCE_DIR}/server/*.proto)
-#foreach(grpc_msg ${MSG_GRPC_PROTOS})
-#        file(RELATIVE_PATH REL_FIL ${PROJECT_SOURCE_DIR} ${grpc_msg})
-#        get_filename_component(DIR ${REL_FIL} DIRECTORY)
-#       get_filename_component(FIL_WE ${grpc_msg} NAME_WE)
-        
-#        list(APPEND MESSAGE_SRC "${PROJECT_BINARY_DIR}/${DIR}/${FIL_WE}.pb.cc")
-#        list(APPEND MESSAGE_HDRS "${PROJECT_BINARY_DIR}/${DIR}/${FIL_WE}.pb.h")
-#        list(APPEND MESSAGE_GRPC_SRC "${PROJECT_BINARY_DIR}/${DIR}/${FIL_WE}.grpc.pb.cc")
-#        list(APPEND MESSAGE_GRPC_HDRS "${PROJECT_BINARY_DIR}/${DIR}/${FIL_WE}.grpc.pb.h")
 
- #       add_custom_command(
- #         OUTPUT "${PROJECT_BINARY_DIR}/${DIR}/${FIL_WE}.grpc.pb.cc"
-  #               "${PROJECT_BINARY_DIR}/${DIR}/${FIL_WE}.grpc.pb.h"
-  #               "${PROJECT_BINARY_DIR}/${DIR}/${FIL_WE}.pb.cc"
-  #               "${PROJECT_BINARY_DIR}/${DIR}/${FIL_WE}.pb.h"
-   #       COMMAND ${PROTOBUF_PROTOC_EXECUTABLE}
-   #       ARGS --grpc_out ${PROJECT_BINARY_DIR}
-    #        --cpp_out ${PROJECT_BINARY_DIR}
-    #       -I ${CMAKE_SOURCE_DIR}
-    #       --plugin=protoc-gen-grpc=${GRPC_GENERATOR_PLUGIN}
-     #       ${grpc_msg}
-     #    DEPENDS "${grpc_msg}"
-      #  )
-#endforeach()
 
 set_source_files_properties(${MESSAGE_SRC} ${MESSAGE_HDRS} PROPERTIES GENERATED TRUE)
 #list(APPEND ALL_LIBRARY_HDRS ${MESSAGE_GRPC_HDRS})
@@ -208,7 +181,11 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
   # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
+  set(ament_cmake_cppcheck_FOUND TRUE)
+  set(ament_cmake_cpplint_FOUND TRUE)
+  set(ament_cmake_lint_cmake_FOUND TRUE)
+  set(ament_cmake_uncrustify_FOUND TRUE)
+
   # the following line skips cpplint (only works in a git repo)
   # uncomment the line when this package is not in a git repo
   #set(ament_cmake_cpplint_FOUND TRUE)

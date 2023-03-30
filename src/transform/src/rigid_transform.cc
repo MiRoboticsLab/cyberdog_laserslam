@@ -1,8 +1,17 @@
 /*
- * Copyright (c) 2021 XiaoMi
+ * Copyright 2016 The Cartographer Authors
  *
- * Author: Feixiang Zeng <zengfeixiang@xiaomi.com>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include "transform/rigid_transform.h"
@@ -23,17 +32,5 @@ Eigen::Quaterniond RollPitchYaw(const double roll, const double pitch,
   const Eigen::AngleAxisd yaw_angle(yaw, Eigen::Vector3d::UnitZ());
   return yaw_angle * pitch_angle * roll_angle;
 }
-// TimedRigid3d Interpolate(const TimedRigid3d& start, const TimedRigid3d& end,
-//                          const common::Time time) {
-//   const double duration = common::ToSeconds(end.timestamp - start.timestamp);
-//   const double factor = common::ToSeconds(time - start.timestamp) / duration;
-//   const Eigen::Vector3d origin =
-//       start.pose.translation() +
-//       (end.pose.translation() - start.pose.translation()) * factor;
-//   const Eigen::Quaterniond rotation =
-//       Eigen::Quaterniond(start.pose.rotation())
-//           .slerp(factor, Eigen::Quaterniond(end.pose.rotation()));
-//   return TimedRigid3d{Rigid3d(origin, rotation), time};
-// }
 }  // namespace transform
 }  // namespace cartographer
