@@ -6,7 +6,7 @@ localization_node:
     laser_scan_topic: /scan
     map_save_path: /home/mi/mapping/
     use_imu: true
-    use_real_time_correlative_scan_matching: true
+    use_real_time_correlative_scan_matching: false
     num_accumulated: 1
     use_filter: true
     gravity_constant: 9.8
@@ -52,7 +52,7 @@ localization_node:
      max_submaps_maintain: 3
      constraint_builder_param:
       min_score: 0.55
-      reloc_min_score: 0.65
+      reloc_min_score: 0.55
       log_matches: true
       loop_closure_rotation_weight: 1.e5
       loop_closure_translation_weight: 1.1e4

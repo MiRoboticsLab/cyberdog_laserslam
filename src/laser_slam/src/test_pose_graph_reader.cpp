@@ -34,7 +34,7 @@ int main(int argc, char ** argv)
   param.insert_free = true;
   param.miss_probability = 0.49;
   cartographer::laser_slam::GridForNavigation grid_inserter(0.05, param);
-
+  
   LOG(INFO) << deserializer.pose_graph().constraint().size() << " , " <<
     deserializer.pose_graph().submaps().size() << " , " <<
     deserializer.pose_graph().submaps(3).global_pose().DebugString() <<
