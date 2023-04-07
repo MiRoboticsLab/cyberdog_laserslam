@@ -38,6 +38,7 @@
 
 #include "laser_slam/local_slam.hpp"
 #include "laser_slam/map_loader.hpp"
+#include "laser_slam/extrapolate_pose.hpp"
 #include "pose_graph/bundle_adjustment.h"
 //  using namespace std::chrono_literals;
 namespace cartographer
@@ -99,11 +100,17 @@ public:
   void SetRelocPublisher(
     const rclcpp_lifecycle::LifecyclePublisher<
       std_msgs::msg::Int32>::SharedPtr & publisher);
+    
+  transform::Rigid3d Extrapolate(const common::Time& time) {
+    return extrapolator_->ExtrapolateByTime(time);
+  }
 
 private:
   bool InitialPoseGraph();
 
   void RelocPublisherThread();
+
+  void ProcessRangeData();
 
   int trajectory_id_;
   int reloc_id_;
@@ -114,6 +121,7 @@ private:
   State state_;
   std::mutex reloc_pose_mutex_;
   std::mutex is_reloc_mutex_;
+  std::mutex range_data_mtx_;
   LocalizationParam param_;
   std::shared_ptr<RelocPose> reloc_pose_;
   LocalSlamPtr local_slam_;
@@ -125,6 +133,9 @@ private:
   transform::Rigid3d first_reloc_pose_;
   rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::Int32>::SharedPtr
     reloc_publisher_;
+  std::shared_ptr<ExtrapolatePose> extrapolator_;
+  std::shared_ptr<std::thread> range_data_process_thread_;
+  std::deque<sensor::PointCloud> pcs_;
 };
 typedef std::shared_ptr<Localization> LocalizationPtr;
 typedef std::shared_ptr<const Localization> LocalizationConstPtr;
